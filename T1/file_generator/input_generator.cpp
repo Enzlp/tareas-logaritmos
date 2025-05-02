@@ -60,6 +60,6 @@ void generate_binary_file(std::string filename, size_t memory_size, size_t memor
     cout << "Ultimo elemento: " << ultimo_elem << endl;
 }
 
-void read_binary_file(std::string filename, size_t memory_size, size_t memory_size_multiplier){
+void read_binary_file(string filename, size_t memory_size, size_t memory_size_multiplier){
 
 }
