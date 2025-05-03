@@ -271,3 +271,24 @@ int MergesortExterno::obtenerContadorIO() {
 void MergesortExterno::resetContadorIO() {
     contadorIO = 0;
 }
+
+/**
+ * Actualiza la aridad del mergesort
+ */
+void MergesortExterno::updateAridad(size_t new_a){
+    this->a = new_a;
+}
+
+/** 
+ * Actualiza el valor de memoria principal M
+ */
+void MergesortExterno::updateMemoria(size_t new_M){
+    this->M = new_M;
+}
+
+/**
+ * Actulaiza el bloque B de memoria
+ */
+void MergesortExterno::updateBloque(size_t new_B){
+    this->B = new_B;
+}
