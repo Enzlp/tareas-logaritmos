@@ -19,11 +19,9 @@ private:
     
     // Funciones auxiliares
     void particionarArchivo(const std::string& archivo_entrada, 
-        std::string* archivos_particiones,
-        size_t inicio, size_t fin, 
-        int64_t* pivotes, size_t num_pivotes,
-        size_t* tamanos_particiones);
-            
+                           const std::string& archivo_salida,
+                           size_t inicio, size_t fin, int64_t* pivotes, size_t num_pivotes);
+    
     void quicksortRecursivo(const std::string& archivo_entrada, 
                            const std::string& archivo_salida,
                            size_t inicio, size_t fin);
