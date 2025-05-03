@@ -78,15 +78,9 @@ bool verificarOrdenamiento(const std::string& nombre_archivo) {
 
 int main(int argc, char* argv[]) {
     // Configuración
-<<<<<<< HEAD
     size_t B = 4096;                // Tamaño del bloque (4 KB por defecto)
     size_t M = 50 * 1024 * 1024;    // 50 MB de memoria principal
     size_t a = 8;                   // Aridad (hay que cambiarlo segun el resultado de mergesort)
-=======
-    size_t B = 4096;  // Tamaño del bloque (4 KB por defecto)
-    size_t M = 50 * 1024 * 1024;  // 50 MB de memoria principal
-    size_t a = 8;     // Aridad (puede ser modificada según tus pruebas)
->>>>>>> c47460e (fixed issues when compiling with make)
     
     // Procesar argumentos
     if (argc > 1) {
@@ -108,11 +102,7 @@ int main(int argc, char* argv[]) {
     std::string archivo_entrada = "datos.bin";
     std::string archivo_salida = "datos_ordenados.bin";
     
-<<<<<<< HEAD
     // Tamaño de prueba (hay que ajustarlo)
-=======
-    // Tamaño de prueba (ajustar según necesidades)
->>>>>>> c47460e (fixed issues when compiling with make)
     size_t tamano_prueba = 4 * 1024 * 1024;  // 4M elementos (32 MB con enteros de 64 bits)
     
     // Generar archivo de prueba
