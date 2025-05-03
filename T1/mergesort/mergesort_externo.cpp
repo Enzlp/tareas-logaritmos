@@ -96,7 +96,7 @@ std::vector<std::string> MergesortExterno::dividirArchivo(const std::string& arc
         if (archivo_idx >= a) archivo_idx = a - 1; // Para asegurar que no excedemos la aridad
         
         // Leemos un bloque del archivo de entrada
-        size_t elementos_a_leer = std::min(elementos_por_bloque, num_elementos - i);
+        size_t elementos_a_leer = std::min(elementos_por_bloque, num_elementos - i); //Menor o igual B
         size_t leidos = fread(buffer, sizeof(int64_t), elementos_a_leer, entrada);
         contadorIO++;
         
@@ -231,7 +231,7 @@ void MergesortExterno::mergeArchivos(const std::vector<std::string>& archivos_te
         }
     }
     
-    // Escribir cualquier dato restante en el buffer de salida
+    // Escribir cualquier dato restante en el buffer de salida (tamaño menor a B)
     if (pos_buffer_salida > 0) {
         fwrite(buffer_salida.data(), sizeof(int64_t), pos_buffer_salida, salida);
         contadorIO++; // Contar operación I/O
@@ -287,8 +287,23 @@ void MergesortExterno::mergesortRecursivo(const std::string& archivo_entrada, co
         }
         
         // Leer todos los elementos
-        size_t elementos_leidos = fread(data, sizeof(int64_t), num_elementos, entrada);
-        contadorIO++;
+        size_t posicion_data = 0;  // Índice para controlar la posición dentro de 'data'
+        size_t elementos_por_bloque = B / sizeof(int64_t);  // Número de elementos que caben en un bloque
+        size_t elementos_leidos = 0;
+        while (posicion_data < num_elementos) {
+            // Calcula cuántos elementos leer en este bloque
+            size_t elementos_a_leer = std::min(elementos_por_bloque, num_elementos - posicion_data);
+
+            // Lee un bloque del archivo
+            leerBloque(entrada, buffer, posicion_data / elementos_por_bloque);
+
+            // Copia el contenido del buffer a 'data' de forma secuencial
+            memcpy(data + posicion_data, buffer, elementos_a_leer * sizeof(int64_t));
+
+            // Actualiza la posición en 'data'
+            posicion_data += elementos_a_leer;
+            elementos_leidos += elementos_a_leer;
+        }
         fclose(entrada);
         
         // Ordenar los datos leídos
@@ -296,14 +311,19 @@ void MergesortExterno::mergesortRecursivo(const std::string& archivo_entrada, co
         
         // Escribir los datos ordenados al archivo de salida
         FILE* salida = fopen(archivo_salida.c_str(), "wb");
-        if (!salida) {
-            std::cerr << "Error: No se pudo crear el archivo " << archivo_salida << std::endl;
-            delete[] data;
-            return;
+
+        //Escribimos en el archivo desde data
+        posicion_data = 0;  
+        while (posicion_data < elementos_leidos) {
+            // Calcula cuántos elementos a escribir en este bloque
+            size_t elementos_a_escribir = std::min(elementos_por_bloque, elementos_leidos - posicion_data);
+            // Copia el bloque correspondiente en el buffer
+            memcpy(buffer, data + posicion_data, elementos_a_escribir * sizeof(int64_t));
+            // Escribe el bloque en el archivo
+            escribirBloque(salida, buffer, posicion_data / elementos_por_bloque);
+            // Actualiza la posición en 'data'
+            posicion_data += elementos_a_escribir;
         }
-        
-        size_t elementos_escritos = fwrite(data, sizeof(int64_t), elementos_leidos, salida);
-        contadorIO++;
         fclose(salida);
         
         delete[] data;
