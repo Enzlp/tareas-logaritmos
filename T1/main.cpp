@@ -8,6 +8,7 @@
 
 //Header
 int busqueda_ternaria(int left, int right, size_t M, size_t B, std::string& archivo_entrada, size_t tamano_archivo);
+bool verificarOrdenamiento(const std::string& nombre_archivo);
 
 /** 
  * busqueda ternaria, divide el conjunto en tres partes y va achicando el intervalo hasta llegar a un intervalo de 4 valores
@@ -23,6 +24,7 @@ int busqueda_ternaria(int left, int right, size_t M, size_t B, std::string& arch
  */
 int busqueda_ternaria(int left, int right, size_t M, size_t B, std::string& archivo_entrada, size_t tamano_archivo){
     int min = std::numeric_limits<int>::max();
+    int a = 0;
     MergesortExterno mergesort_search(B, M , 0);
     std::string archivo_salida = "busqueda.bin";
   
@@ -34,11 +36,13 @@ int busqueda_ternaria(int left, int right, size_t M, size_t B, std::string& arch
         mergesort_search.mergesort(archivo_entrada, archivo_salida , tamano_archivo);
         int sort_mid1 = mergesort_search.obtenerContadorIO();
         mergesort_search.resetContadorIO();
+        mergesort_search.limpiarBuffer();
 
         mergesort_search.updateAridad(static_cast<size_t>(mid2));
         mergesort_search.mergesort(archivo_entrada, archivo_salida , tamano_archivo);
         int sort_mid2 = mergesort_search.obtenerContadorIO();
         mergesort_search.resetContadorIO();
+        mergesort_search.limpiarBuffer();
 
         if (sort_mid1 < sort_mid2) {
             right = mid2;
@@ -50,13 +54,57 @@ int busqueda_ternaria(int left, int right, size_t M, size_t B, std::string& arch
     for(int i = left; i <= right; i++){
         mergesort_search.updateAridad(static_cast<size_t>(i));
         mergesort_search.mergesort(archivo_entrada, archivo_salida , tamano_archivo);
-        min = std::min(mergesort_search.obtenerContadorIO(), min);
+        int currentIO = mergesort_search.obtenerContadorIO();
+        if (currentIO < min) {
+            min = currentIO;
+            a = i;
+        }
         mergesort_search.resetContadorIO();
     }
 
     std::remove(archivo_salida.c_str());
-    return min;
+    return a;
 }
+
+//Hay que sacar esta funcion antes de entregar
+bool verificarOrdenamiento(const std::string& nombre_archivo) {
+  FILE* archivo = fopen(nombre_archivo.c_str(), "rb");
+  if (!archivo) {
+      std::cerr << "Error al abrir el archivo: " << nombre_archivo << std::endl;
+      return false;
+  }
+  
+  // Tamaño de buffer (1 MB)
+  const size_t buffer_size = 1024 * 1024 / sizeof(int64_t);
+  int64_t* buffer = new int64_t[buffer_size];
+  
+  // Valor anterior para comparar
+  int64_t valor_anterior = INT64_MIN;
+  bool ordenado = true;
+  
+  // Leer archivo por bloques
+  size_t elementos_leidos;
+  do {
+      elementos_leidos = fread(buffer, sizeof(int64_t), buffer_size, archivo);
+      
+      for (size_t i = 0; i < elementos_leidos; i++) {
+          if (buffer[i] < valor_anterior) {
+              ordenado = false;
+              break;
+          }
+          valor_anterior = buffer[i];
+      }
+      
+      if (!ordenado) break;
+  } while (elementos_leidos == buffer_size);
+  
+  delete[] buffer;
+  fclose(archivo);
+  
+  return ordenado;
+}
+
+
 
 int main(int argc, char* argv[]){
     
@@ -86,16 +134,13 @@ int main(int argc, char* argv[]){
     std::string archivo_entrada = filename + ".bin";
     generate_binary_file(archivo_entrada, M, 4);
 
-    size_t tamano_archivo = 60 * M * sizeof(int64_t);
-    size_t elementos_en_bloque = B / sizeof(int64_t);
+    size_t tamano_archivo = 4 * M;
+    size_t b = B / sizeof(int64_t);
 
-    //int mejor_io = busqueda_ternaria(2, elementos_en_bloque, M, B, archivo_entrada, tamano_archivo);
+    //int mejor_io = busqueda_ternaria(2, 10, M, B, archivo_entrada, tamano_archivo);
     
     MergesortExterno mergesort_search(B, M , 10);
-    mergesort_search.mergesort(archivo_entrada, "salida.bin", M);
-
-    QuicksortExterno quicksort(B, M, 8);
-    quicksort.ordenar(archivo_entrada, "salida.bin");
+    mergesort_search.mergesort(archivo_entrada, "salida.bin", 4*M);
     
 
     //cout << "Mejor_io: " << mejor_io << std::endl;

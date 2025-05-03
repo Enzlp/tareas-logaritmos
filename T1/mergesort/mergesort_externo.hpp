@@ -49,8 +49,9 @@ public:
 
     //Cambio valores internos
     void updateAridad(size_t new_a);
-    void updateBloque(size_t new_B);
     void updateMemoria(size_t new_M);
+    void limpiarBuffer();
+
 };
 
 #endif
