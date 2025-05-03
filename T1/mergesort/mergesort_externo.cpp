@@ -244,16 +244,6 @@ void MergesortExterno::mergeArchivos(const std::vector<std::string>& archivos_te
     }
 }
 
-/**
- * Función recursiva que invoca la subdivisión de archivos y su posterior mezcla para ir ordenando el archivo original.
- * Si el tamaño del fragmento es lo suficientemente pequeño como para caber en memoria, se ordena directamente. Si no se subdivide, ordena
- * y luego se fusionan.
- *
- * @param archivo_entrada Nombre del archivo actual que se va a subdividir y posteriormente mezclar.
- * @param archivo_salida Nombre del archivo donde se escribirá la salida ordenada.
- * @param inicio Índice inicial del segmento del archivo.
- * @param fin Índice final del archivo.
- */
 
 /**
  * Función recursiva que invoca la subdivisión de archivos y su posterior mezcla para ir ordenando el archivo original.
