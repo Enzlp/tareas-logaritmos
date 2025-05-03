@@ -1,4 +1,4 @@
-// quicksort_externo.cpp
+// quicksort_externo.cpp V1
 // Implementación de QuicksortExterno
 
 #include "quicksort_externo.h"

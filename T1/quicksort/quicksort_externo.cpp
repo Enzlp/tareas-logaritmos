@@ -1,3 +1,9 @@
+// Quicksort Externo V2 - mas optimizado
+// Particionamiento más directo
+// Mejor manejo de archivos temporales con nombres más simples
+// Simplificación de la recursión
+// Reducción de código redundante
+
 // quicksort_externo.cpp
 #include "quicksort_externo.h"
 #include <algorithm>
