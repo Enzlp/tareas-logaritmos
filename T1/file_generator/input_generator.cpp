@@ -30,8 +30,8 @@ void generate_binary_file(std::string filename, size_t memory_size, size_t memor
         return;
     }
 
-    cout << "Elementos por buffer: " << buffer_elements << endl; 
-    cout << "Elementos totales: " << memory_size_multiplier * memory_size << endl;
+    //cout << "Elementos por buffer: " << buffer_elements << endl; 
+    //cout << "Elementos totales: " << memory_size_multiplier * memory_size << endl;
 
     vector<uint64_t> buffer_vector(buffer_elements);
     
@@ -56,8 +56,9 @@ void generate_binary_file(std::string filename, size_t memory_size, size_t memor
 
     file.close();
 
-    cout << "Primer elemento: " << primer_elem << endl;
-    cout << "Ultimo elemento: " << ultimo_elem << endl;
+    //cout << "Primer elemento: " << primer_elem << endl;
+    //cout << "Ultimo elemento: " << ultimo_elem << endl;
+    cout << "Binario generado: Largo " << memory_size_multiplier << "M" << endl; 
 }
 
 void read_binary_file(string filename, size_t memory_size, size_t memory_size_multiplier){
