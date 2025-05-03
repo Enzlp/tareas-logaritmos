@@ -406,5 +406,8 @@ void MergesortExterno::updateMemoria(size_t new_M){
 }
 
 void MergesortExterno::limpiarBuffer(){
-    delete[] this->buffer;
+    if (buffer != nullptr) {
+        size_t tamano_buffer = B / sizeof(int64_t);
+        std::fill(buffer, buffer + tamano_buffer, 0);
+    }
 }
