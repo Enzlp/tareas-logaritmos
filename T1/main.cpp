@@ -137,13 +137,14 @@ int main(int argc, char* argv[]){
     size_t tamano_archivo = 4 * M;
     size_t b = B / sizeof(int64_t);
 
-    int mejor_io = busqueda_ternaria(2, 10, M, B, archivo_entrada, tamano_archivo);
+    //int mejor_io = busqueda_ternaria(2, 10, M, B, archivo_entrada, tamano_archivo);
     
-    //MergesortExterno mergesort_search(B, M , 10);
-    //mergesort_search.mergesort(archivo_entrada, "salida.bin", 4*M);
+    MergesortExterno mergesort_search(B, M , 10);
+    mergesort_search.mergesort(archivo_entrada, "salida.bin", 4*M);
     
+    cout<<verificarOrdenamiento("salida.bin")<<std::endl;
 
-    cout << "Mejor_io: " << mejor_io << std::endl;
+    //cout << "Mejor_io: " << mejor_io << std::endl;
   
     return 0;
 }
