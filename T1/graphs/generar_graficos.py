@@ -6,7 +6,10 @@ import os
 
 """
 Genera graficos de experimentos hechos con mergesort externo y quicksort externo
-@params archivo_csv ruta archivo resultados
+@param archivo_csv ruta archivo resultados
+@param y_label nombre de eje y
+@param x_label nombre de eje x
+@param title titulo del grafico
 """
 def generar_grafico(archivo_csv, y_label, x_label, title):
     # Cargar datos del archivo CSV
