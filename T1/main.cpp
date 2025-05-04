@@ -136,43 +136,48 @@ int main(int argc, char* argv[]){
     size_t tamano_archivo = 60 * M;
     size_t b = B / sizeof(int64_t);
 
-    int a = busqueda_ternaria(2, 4, M, B, archivo_entrada, tamano_archivo);
+    int a = busqueda_ternaria(2, b, M, B, archivo_entrada, tamano_archivo);
     
     cout<<"Aridad obtenida: "<< a <<std::endl;
 
     // Paso 2: Ordenamiento de archivos
     cout<<""<<std::endl;
-    size_t N[5] = {4, 16, 32, 48, 60};
+    std::vector<size_t> N = {4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60};
+    std::vector<std::tuple<std::string, size_t>> nombres_archivos;
 
-    std::vector<std::string> archivos;
-    for (int i = 0; i < 5; ++i) {
-        std::string nombre_archivo = filename + "_" + std::to_string(i + 1) + ".bin";
-        archivos.push_back(nombre_archivo);
-        generate_binary_file(nombre_archivo, M, N[i]);
+    for (size_t i = 0; i < N.size(); i++) {
+        for (int j = 1; j <= 5; j++) {
+            std::string entrada = filename + "_" + std::to_string(i) + "_" + std::to_string(j) + ".bin";
+            generate_binary_file(entrada, M, N[i]*M);
+            nombres_archivos.push_back(std::make_tuple(entrada, i));
+        }
     }
 
-    cout<<"Ordenando archivos con mergesort:"<<std::endl;
-    std::vector<time_t> time_merge;
+    cout<< "Ordenamiento por mergesort: "<<std::endl;
     std::vector<int> io_merge;
+    std::vector<double> time_merge;
+    MergesortExterno mergesort(B,M,a); //Calculo de mergesort para cada archivo
+    for (const auto& archivo : nombres_archivos) {
+        std::string name = std::get<0>(archivo);  
+        size_t size = std::get<1>(archivo);       
 
-    MergesortExterno mergesort(M, B, a);
-
-    for (int i = 0; i < 5; ++i) {
-        time_t start = time(nullptr);
-        mergesort.mergesort(archivos[i], "salida_" + std::to_string(i + 1) + ".bin", N[i]*M);
+        time_t start = time(nullptr);   
+        mergesort.mergesort(name, "salida.bin", size); 
         time_t end = time(nullptr);
-        time_merge.push_back(end - start);
+
+        time_merge.push_back(difftime(end, start));
         io_merge.push_back(mergesort.obtenerContadorIO());
-        mergesort.limpiarBuffer();
         mergesort.resetContadorIO();
+        mergesort.limpiarBuffer();
     }
 
-    double avg_merge_t = time_merge.empty() ? 0.0 : static_cast<double>(std::accumulate(time_merge.begin(), time_merge.end(), 0LL)) / time_merge.size();
-    double avg_merge_io = io_merge.empty() ? 0.0 : static_cast<double>(std::accumulate(io_merge.begin(), io_merge.end(), 0LL)) / io_merge.size();
-    cout<<"- Promedio tiempo de ejecucion: "<<avg_merge_t<<std::endl;
-    cout<<"- Promedio tiempo de ejecucion: "<<avg_merge_io<<std::endl;
+    double avg_io_merge = std::accumulate(io_merge.begin(), io_merge.end(), 0.0) / io_merge.size();
+    double avg_time_merge = std::accumulate(time_merge.begin(), time_merge.end(), 0.0) / time_merge.size();
+    cout<<"- Promedio de tiempo : "<<avg_time_merge<< std::endl;
+    cout<<"- Promedio de IO :"<<avg_io_merge<<std::endl;
 
-    cout<<"Ordenando archivos con quicksort:"<<std::endl;
+    cout<< "Ordenamiento por quicksort: "<<std::endl;
 
+    
     return 0;
 }
