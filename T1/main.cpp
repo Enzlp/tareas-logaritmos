@@ -175,9 +175,39 @@ int main(int argc, char* argv[]){
     double avg_time_merge = std::accumulate(time_merge.begin(), time_merge.end(), 0.0) / time_merge.size();
     cout<<"- Promedio de tiempo : "<<avg_time_merge<< std::endl;
     cout<<"- Promedio de IO :"<<avg_io_merge<<std::endl;
+    std::remove("salida.bin");
+
 
     cout<< "Ordenamiento por quicksort: "<<std::endl;
+    std::vector<int> io_quick;
+    std::vector<double> time_quick;
+    QuicksortExterno quicksort(M,B,a);
+    for (const auto& archivo : nombres_archivos) {
+        std::string name = std::get<0>(archivo);      
 
-    
+        time_t start = time(nullptr);   
+        quicksort.ordenar(name, "salida.bin"); 
+        time_t end = time(nullptr);
+
+        time_quick.push_back(difftime(end, start));
+        io_quick.push_back(quicksort.obtenerContadorIO());
+        quicksort.resetContadorIO();
+        //verificar si hay que implementar un reset al buffer
+    }
+
+    double avg_io_quick = std::accumulate(io_quick.begin(), io_quick.end(), 0.0) / io_quick.size();
+    double avg_time_quick = std::accumulate(time_quick.begin(), time_quick.end(), 0.0) / time_quick.size();
+    cout<<"- Promedio de tiempo : "<<avg_time_quick<< std::endl;
+    cout<<"- Promedio de IO :"<<avg_io_quick<<std::endl;
+    std::remove("salida.bin");
+
+    //Paso 3: Limpieza de archivos
+    for (const auto& archivo : nombres_archivos) {
+        std::string name = std::get<0>(archivo);  
+        std::remove(name.c_str());
+    }
+
+    //Paso 5: generar graficos
+
     return 0;
 }
