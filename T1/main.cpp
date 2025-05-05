@@ -111,119 +111,121 @@ int main(int argc, char* argv[]){
     size_t tamano_archivo = 60 * M;
     size_t b = B / sizeof(int64_t);
 
-    int a = busqueda_ternaria(2, b, M, B, archivo_entrada, tamano_archivo);
+    //int a = busqueda_ternaria(2, b, M, B, archivo_entrada, tamano_archivo);
+    int a = 96;
     
     cout<<"Aridad obtenida: "<< a <<std::endl;
 
+    std::remove(archivo_entrada.c_str());
+
     // Paso 2: Ordenamiento de archivos
-    cout<<""<<std::endl;
+    cout << std::endl;
     std::vector<size_t> N = {4, 8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60};
-    std::vector<std::tuple<std::string, size_t>> nombres_archivos;
 
-    for (size_t i = 0; i < N.size(); i++) {
-        for (int j = 1; j <= 5; j++) {
-            std::string entrada = filename + "_" + std::to_string(i) + "_" + std::to_string(j) + ".bin";
-            generate_binary_file(entrada, M, N[i]*M);
-            nombres_archivos.push_back(std::make_tuple(entrada, N[i]));
-        }
-    }
-
-    cout<< "Ordenamiento por mergesort: "<<std::endl;
+    // Vectores para almacenar resultados
     std::vector<std::tuple<int, size_t>> io_merge;
     std::vector<std::tuple<double, size_t>> time_merge;
-    MergesortExterno mergesort(B,M,a); //Calculo de mergesort para cada archivo
-    for (const auto& archivo : nombres_archivos) {
-        std::string name = std::get<0>(archivo);  
-        size_t size = std::get<1>(archivo);       
-
-        time_t start = time(nullptr);   
-        mergesort.mergesort(name, "salida.bin", size); 
-        time_t end = time(nullptr);
-
-        time_merge.push_back(std::make_tuple(difftime(end, start), size));
-        io_merge.push_back(std::make_tuple(mergesort.obtenerContadorIO(), size));
-        mergesort.resetContadorIO();
-        mergesort.limpiarBuffer();
-    }
-    std::remove("salida.bin");
-
-    std::vector<std::tuple<double, size_t>> time_merge_avg;
-    for (size_t i = 0; i < time_merge.size(); i += 5) {
-        double suma = 0.0;
-        size_t grupo = std::get<1>(time_merge[i]); // misma N para los 5
-        for (size_t j = 0; j < 5; ++j) {
-            suma += std::get<0>(time_merge[i + j]);
-        }
-        double promedio = suma / 5.0;
-        time_merge_avg.emplace_back(promedio, grupo);
-    }
-
-    std::vector<std::tuple<double, size_t>> io_merge_avg;
-    for (size_t i = 0; i < io_merge.size(); i += 5) {
-        double suma = 0.0;
-        size_t grupo = std::get<1>(io_merge[i]); // misma N para los 5
-        for (size_t j = 0; j < 5; ++j) {
-            suma += std::get<0>(io_merge[i + j]);
-        }
-        double promedio = suma / 5.0;
-        io_merge_avg.emplace_back(promedio, grupo);
-    }
-    cout<<"- Valores de tiempo promedio calculados "<<std::endl;
-    cout<<"- Valores de IO promedio calculados"<<std::endl;
-
-
-    cout<< "Ordenamiento por quicksort: "<<std::endl;
     std::vector<std::tuple<int, size_t>> io_quick;
     std::vector<std::tuple<double, size_t>> time_quick;
-    
-    QuicksortExterno quicksort(M, B, a);
-    
-    for (const auto& archivo : nombres_archivos) {
-        std::string name = std::get<0>(archivo);      
-        size_t size = std::get<1>(archivo);  // 🔧 Esto faltaba
-    
-        time_t start = time(nullptr);   
-        quicksort.ordenar(name, "salida.bin"); 
-        time_t end = time(nullptr);
-    
-        time_quick.push_back(std::make_tuple(difftime(end, start), size));
-        io_quick.push_back(std::make_tuple(quicksort.obtenerContadorIO(), size));
-        quicksort.resetContadorIO();
-        // quicksort.limpiarBuffer(); // ← solo si implementaste esa función
-    }
-    
-    std::remove("salida.bin");
 
+    // Inicializar algoritmos de ordenamiento
+    MergesortExterno mergesort(B, M, a);
+    QuicksortExterno quicksort(B, M, a); 
+
+    // Procesar un archivo a la vez
+    for (size_t i = 0; i < N.size(); i++) {
+        for (int j = 1; j <= 5; j++) {
+            // Generar nombre y archivo
+            std::string archivo_nombre = filename + "_" + std::to_string(i) + "_" + std::to_string(j) + ".bin";
+            size_t tamano = N[i];
+            
+            cout << "Procesando archivo: " << archivo_nombre << " (tamaño: " << tamano << "M)" << endl;
+            
+            // Generar archivo de prueba
+            generate_binary_file(archivo_nombre, M, tamano);
+            
+            // Archivo temporal para resultados
+            std::string archivo_salida = "temp_salida.bin";
+            
+            // 1. Procesar con Mergesort
+            cout << "  - Aplicando Mergesort..." << endl;
+            time_t start_merge = time(nullptr);
+            mergesort.mergesort(archivo_nombre, archivo_salida, tamano*M);
+            time_t end_merge = time(nullptr);
+            
+            // Guardar resultados de Mergesort
+            time_merge.push_back(std::make_tuple(difftime(end_merge, start_merge), tamano));
+            io_merge.push_back(std::make_tuple(mergesort.obtenerContadorIO(), tamano));
+            cout<<"contador de io: "<<mergesort.obtenerContadorIO()<<endl;
+            
+            // Limpiar
+            mergesort.resetContadorIO();
+            mergesort.limpiarBuffer();
+            std::remove(archivo_salida.c_str());
+            
+            // 2. Procesar con Quicksort
+            cout << "  - Aplicando Quicksort..." << endl;
+            time_t start_quick = time(nullptr);
+            quicksort.ordenar(archivo_nombre, archivo_salida);
+            time_t end_quick = time(nullptr);
+            
+            // Guardar resultados de Quicksort
+            time_quick.push_back(std::make_tuple(difftime(end_quick, start_quick), tamano));
+            io_quick.push_back(std::make_tuple(quicksort.obtenerContadorIO(), tamano));
+            
+            // Limpiar
+            quicksort.resetContadorIO();
+            std::remove(archivo_salida.c_str());
+            
+            // Eliminar archivo de entrada para liberar espacio
+            std::remove(archivo_nombre.c_str());
+            
+            cout << "  - Completado" << endl;
+        }
+    }
+
+    // Calcular promedios para Mergesort
+    cout << "Calculando promedios para Mergesort..." << endl;
+    std::vector<std::tuple<double, size_t>> time_merge_avg;
+    std::vector<std::tuple<double, size_t>> io_merge_avg;
+
+    for (size_t i = 0; i < N.size(); i++) {
+        double suma_tiempo = 0.0;
+        double suma_io = 0.0;
+        size_t tamano = N[i];
+        
+        for (int j = 0; j < 5; j++) {
+            size_t idx = i * 5 + j;
+            suma_tiempo += std::get<0>(time_merge[idx]);
+            suma_io += std::get<0>(io_merge[idx]);
+        }
+        
+        time_merge_avg.emplace_back(suma_tiempo / 5.0, tamano);
+        io_merge_avg.emplace_back(suma_io / 5.0, tamano);
+    }
+
+    // Calcular promedios para Quicksort
+    cout << "Calculando promedios para Quicksort..." << endl;
     std::vector<std::tuple<double, size_t>> time_quick_avg;
-    for (size_t i = 0; i < time_quick.size(); i += 5) {
-        double suma = 0.0;
-        size_t grupo = std::get<1>(time_quick[i]); // misma N para los 5
-        for (size_t j = 0; j < 5; ++j) {
-            suma += std::get<0>(time_quick[i + j]);
-        }
-        double promedio = suma / 5.0;
-        time_quick_avg.emplace_back(promedio, grupo);
-    }
-    
     std::vector<std::tuple<double, size_t>> io_quick_avg;
-    for (size_t i = 0; i < io_quick.size(); i += 5) {
-        double suma = 0.0;
-        size_t grupo = std::get<1>(io_quick[i]); // misma N para los 5
-        for (size_t j = 0; j < 5; ++j) {
-            suma += std::get<0>(io_quick[i + j]);
+
+    for (size_t i = 0; i < N.size(); i++) {
+        double suma_tiempo = 0.0;
+        double suma_io = 0.0;
+        size_t tamano = N[i];
+        
+        for (int j = 0; j < 5; j++) {
+            size_t idx = i * 5 + j;
+            suma_tiempo += std::get<0>(time_quick[idx]);
+            suma_io += std::get<0>(io_quick[idx]);
         }
-        double promedio = suma / 5.0;
-        io_quick_avg.emplace_back(promedio, grupo);
+        
+        time_quick_avg.emplace_back(suma_tiempo / 5.0, tamano);
+        io_quick_avg.emplace_back(suma_io / 5.0, tamano);
     }
-    cout<<"- Valores de tiempo promedio calculados "<<std::endl;
-    cout<<"- Valores de IO promedio calculados"<<std::endl;
 
-
-    //Paso 3: Limpieza de archivos
-    for (const auto& archivo : nombres_archivos) {
-        std::string name = std::get<0>(archivo);  
-        std::remove(name.c_str());
-    }
+    cout << "- Valores de tiempo promedio calculados" << endl;
+    cout << "- Valores de IO promedio calculados" << endl;
 
     //Paso 4: generar grafico (Revisar si N devuelve en int o byte)
     exportToCsv("io_ms.csv", io_merge_avg);
