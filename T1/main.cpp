@@ -70,7 +70,11 @@ int busqueda_ternaria(int left, int right, size_t M, size_t B, std::string& arch
     return a;
 }
 
-
+/**
+ * exporta los datos obtenidos a formato csv
+ * @param filename nombre del archivo a exportar
+ * @param data datos a exportar
+ */
 void exportToCsv(const std::string& filename, const std::vector<std::tuple<double, size_t>>& data){
     std::string archivo = "graphs/"+filename;
     std::ofstream file(archivo.c_str());

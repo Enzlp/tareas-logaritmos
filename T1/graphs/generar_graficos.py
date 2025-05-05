@@ -11,17 +11,20 @@ Genera graficos de experimentos hechos con mergesort externo y quicksort externo
 @param x_label nombre de eje x
 @param title titulo del grafico
 """
+import pandas as pd
+import matplotlib.pyplot as plt
+
 def generar_grafico(archivo_csv, y_label, x_label, title):
-    # Cargar datos del archivo CSV
-    df = pd.read_csv(archivo_csv)
+    # Cargar datos del archivo CSV sin encabezado
+    df = pd.read_csv(archivo_csv, header=None)
 
     # Verificar que las columnas esperadas estén presentes
     if df.columns.size < 2:
         print(f"Archivo {archivo_csv} no tiene suficientes columnas.")
         return
-
-    y = df.iloc[:, 0]  # Primera columna (tiempo o IO)
-    x = df.iloc[:, 1]  # Segunda columna (N)
+    
+    x = df.iloc[:, 0]  # Primera columna
+    y = df.iloc[:, 1]  # Segunda columna
 
     # Configurar estilo del gráfico
     plt.style.use('ggplot')
@@ -33,7 +36,6 @@ def generar_grafico(archivo_csv, y_label, x_label, title):
     plt.ylabel(y_label)
     plt.title(title)
     plt.grid(True, linestyle='--', alpha=0.7)
-    plt.legend()
     plt.tight_layout()
 
     # Guardar gráfico como imagen
@@ -42,6 +44,7 @@ def generar_grafico(archivo_csv, y_label, x_label, title):
     plt.close()
     
     print(f"Gráfico guardado en {nombre_salida}")
+
 
 if __name__ == "__main__":
     archivos = [

@@ -415,6 +415,9 @@ void MergesortExterno::updateMemoria(size_t new_M){
     this->M = new_M;
 }
 
+/** 
+ * limpia el buffer de la estructura de datos
+ */
 void MergesortExterno::limpiarBuffer(){
     if (buffer != nullptr) {
         size_t tamano_buffer = B / sizeof(int64_t);
