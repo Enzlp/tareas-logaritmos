@@ -128,8 +128,8 @@ int main(int argc, char* argv[]){
     size_t tamano_archivo = 60 * M;
     size_t b = B / sizeof(int64_t);
 
-    //int a = busqueda_ternaria(2, b, M, B, archivo_entrada, tamano_archivo);
-    int a = 96;
+    int a = busqueda_ternaria(2, b, M, B, archivo_entrada, tamano_archivo);
+    //int a = 96;
     
     cout<<"Aridad obtenida: "<< a <<std::endl;
 
@@ -173,7 +173,7 @@ int main(int argc, char* argv[]){
             // Guardar resultados de Mergesort
             time_merge.push_back(std::make_tuple(difftime(end_merge, start_merge), tamano));
             io_merge.push_back(std::make_tuple(mergesort.obtenerContadorIO(), tamano));
-            cout<<"contador de io: "<<mergesort.obtenerContadorIO()<<endl;
+        
             
             // Limpiar
             mergesort.resetContadorIO();
