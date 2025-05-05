@@ -7,7 +7,8 @@
 #include <ctime>                  
 #include "mergesort/mergesort_externo.hpp"
 #include "quicksort/quicksort_externo.h"
-#include "file_generator/input_generator.h"             
+#include "file_generator/input_generator.h"       
+#include "misc/block_size.h"      
 
 
 //Header
@@ -88,20 +89,32 @@ void exportToCsv(const std::string& filename, const std::vector<std::tuple<doubl
 int main(int argc, char* argv[]){
     
     // Configuración por defecto
-    size_t B = 4096;                    // Tamaño del bloque (512 B por defecto)
-    size_t M = 50 * 1024 * 1024;       // 50 MB de memoria principal
+    size_t M = 50 * 1024 * 1024;  // 50 MB de memoria principal
+    std::string filename = "pruebas";
+
+    // Intentamos obtener el tamaño del bloque
+    size_t B = get_block_size();
     
-    if (argc < 2 || argc > 3){
-        std::cerr << "Usage:\n"
-            << "  " << argv[0] << " <filename> <memory_size_in_MB> \n";
-        return 1;
+    if (B < 0) {
+        std::cout << "Error al obtener el tamaño de bloque." << std::endl;
+        std::cout << "Se usará un valor por defecto de 4096" << std::endl;
+        B = 4096; 
+    }
+
+    if (argc < 2){
+        std::cout << "Utilizando un valor de memoria por defecto de 50MB" << std::endl;
+        std::cout << "Para cambiarlo ejecutar " << argv[0] << " <memoria_en_MB>" << std::endl;
     }
 
     // Procesar argumentos
-    std::string filename = argv[1];
+    if (argc == 2) {
+        M = std::stoul(argv[1]) * 1024 * 1024;  // Convertir MB a bytes
+    }
 
-    if (argc > 2) {
-        M = std::stoul(argv[2]) * 1024 * 1024;  // Convertir MB a bytes
+    if (argc > 2){
+        std::cerr << "Uso:\n"
+            << "  " << argv[0] << " <memoria_en_MB> \n";
+        return 1;
     }
     
     std::cout << "Configuración:" << std::endl;
