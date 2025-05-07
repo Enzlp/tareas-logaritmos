@@ -11,28 +11,61 @@
 #include <random>
 #include <iostream>
 
+/**
+ * @brief Constructor de la clase QuicksortExterno.
+ * @param tamano_bloque El tamaño del bloque (B) para operaciones de disco, en bytes.
+ * @param memoria_maxima El tamaño máximo de memoria principal (M) disponible, en bytes.
+ * @param aridad El número de subarreglos (a) a utilizar.
+ */
 QuicksortExterno::QuicksortExterno(size_t tamano_bloque, size_t memoria_maxima, size_t aridad) 
     : B(tamano_bloque), M(memoria_maxima), a(aridad), contador_io(0) {
     buffer = new int64_t[B / sizeof(int64_t)];
 }
 
+/**
+ * @brief Destructor de la clase QuicksortExterno.
+ * Libera la memoria asignada para el buffer.
+ */
 QuicksortExterno::~QuicksortExterno() {
     delete[] buffer;
 }
 
+/**
+ * @brief Lee un bloque de datos desde un archivo.
+ * @param archivo Puntero al descriptor del archivo (FILE*) abierto en modo binario para lectura.
+ * @param bloque (Salida) Puntero al array donde se cargarán los datos leídos. Su tamaño debe ser B/sizeof(int64_t).
+ * @param posicion Número de bloque a leer (0-indexado). La posición real en bytes es posicion * B.
+ */
 void QuicksortExterno::leerBloque(FILE* archivo, int64_t* bloque, size_t posicion) {
     fseek(archivo, posicion * B, SEEK_SET);
     size_t ignorado = fread(bloque, sizeof(int64_t), B / sizeof(int64_t), archivo);
-    (void)ignorado; // Se ignora el valor es solo para que no salgan flags al compilar
+    (void)ignorado; // Se ignora el valor para que no salgan flags al compilar
     contador_io++;
 }
 
+/**
+ * @brief Escribe un bloque de datos en un archivo.
+ * @param archivo Puntero al descriptor del archivo (FILE*) abierto en modo binario para escritura.
+ * @param bloque Puntero al array que contiene los datos a escribir. Su tamaño debe ser B/sizeof(int64_t).
+ * @param posicion Número de bloque donde se escribirán los datos (0-indexado). La posición real en bytes es posicion * B.
+ */
 void QuicksortExterno::escribirBloque(FILE* archivo, int64_t* bloque, size_t posicion) {
     fseek(archivo, posicion * B, SEEK_SET);
     fwrite(bloque, sizeof(int64_t), B / sizeof(int64_t), archivo);
     contador_io++;
 }
 
+/**
+ * @brief Selecciona 'a-1' pivotes desde un rango de un archivo.
+ * Lee un bloque aleatorio del archivo dentro del rango [inicio, fin),
+ * toma 'a-1' elementos al azar de ese bloque, los ordena y los devuelve.
+ * @param archivo Nombre del archivo del cual seleccionar los pivotes.
+ * @param inicio Índice del primer elemento del rango (inclusive) en el archivo.
+ * @param fin Índice del último elemento del rango (exclusive) en el archivo.
+ * @return Un puntero a un array de 'a-1' int64_t que son los pivotes seleccionados y ordenados.
+ * Retorna nullptr si no hay suficientes elementos para seleccionar pivotes o si a <= 1.
+ * El llamador es responsable de liberar la memoria de este array.
+ */
 int64_t* QuicksortExterno::seleccionarPivotes(const std::string& archivo, size_t inicio, size_t fin) {
     if (fin - inicio <= a) {
         return nullptr;  // No hay suficientes elementos para seleccionar pivotes
@@ -74,6 +107,20 @@ int64_t* QuicksortExterno::seleccionarPivotes(const std::string& archivo, size_t
     return pivotes;
 }
 
+/**
+ * @brief Particiona un segmento de un archivo en 'a' sub-archivos (particiones) usando los pivotes dados.
+ * Lee el archivo de entrada bloque por bloque, y para cada elemento, determina a qué partición
+ * pertenece basado en los pivotes, y lo escribe en el archivo temporal correspondiente.
+ * @param archivo_entrada Nombre del archivo que contiene los datos a particionar.
+ * @param archivos_particiones (Entrada/Salida) Array de strings con los nombres de los archivos temporales
+ * que se crearán para cada una de las 'a' particiones.
+ * @param inicio Índice del primer elemento del segmento a particionar en archivo_entrada.
+ * @param fin Índice del último elemento (exclusive) del segmento a particionar.
+ * @param pivotes Array de 'num_pivotes' (debe ser a-1) valores pivote, ordenados ascendentemente.
+ * @param num_pivotes Número de pivotes efectivos en el array 'pivotes'.
+ * @param tamanos_particiones (Salida) Array donde se almacenarán los tamaños (en número de elementos)
+ * de cada una de las 'a' (o num_pivotes + 1) particiones generadas.
+ */
 void QuicksortExterno::particionarArchivo(const std::string& archivo_entrada, 
                                        std::string* archivos_particiones,
                                        size_t inicio, size_t fin, 
@@ -162,6 +209,18 @@ void QuicksortExterno::particionarArchivo(const std::string& archivo_entrada,
     delete[] archivos;
 }
 
+/**
+ * @brief Implementación recursiva de Quicksort Externo.
+ * Si el segmento [inicio, fin) del archivo_entrada cabe en memoria (<= M bytes),
+ * se lee, se ordena en memoria usando std::sort, y se escribe en archivo_salida.
+ * Si es más grande, se seleccionan pivotes, se particiona archivo_entrada en archivos temporales,
+ * se llama recursivamente a quicksortRecursivo para cada partición, y finalmente
+ * se concatenan las particiones ordenadas en archivo_salida.
+ * @param archivo_entrada Nombre del archivo (o partición) que se va a ordenar.
+ * @param archivo_salida Nombre del archivo donde se escribirá el resultado ordenado.
+ * @param inicio Índice del primer elemento (inclusive) del segmento a ordenar.
+ * @param fin Índice del último elemento (exclusive) del segmento a ordenar.
+ */
 void QuicksortExterno::quicksortRecursivo(const std::string& archivo_entrada, 
                                        const std::string& archivo_salida,
                                        size_t inicio, size_t fin) {
@@ -272,6 +331,11 @@ void QuicksortExterno::quicksortRecursivo(const std::string& archivo_entrada,
     if (pivotes) delete[] pivotes;
 }
 
+/**
+ * @brief Función principal para ordenar un archivo usando Quicksort Externo.
+ * @param archivo_entrada Nombre del archivo que contiene los datos desordenados.
+ * @param archivo_salida Nombre del archivo donde se guardará el resultado ordenado.
+ */
 void QuicksortExterno::ordenar(const std::string& archivo_entrada, const std::string& archivo_salida) {
     // Obtener tamaño del archivo
     FILE* archivo = fopen(archivo_entrada.c_str(), "rb");
@@ -289,10 +353,17 @@ void QuicksortExterno::ordenar(const std::string& archivo_entrada, const std::st
     quicksortRecursivo(archivo_entrada, archivo_salida, 0, num_elementos);
 }
 
+/**
+ * @brief Devuelve el contador de operaciones de I/O.
+ * @return El número total de operaciones de lectura/escritura de bloques realizadas.
+ */
 size_t QuicksortExterno::obtenerContadorIO() {
     return contador_io;
 }
 
+/**
+ * @brief Reinicia el contador de operaciones de I/O a cero.
+ */
 void QuicksortExterno::resetContadorIO() {
     contador_io = 0;
 }
