@@ -30,6 +30,7 @@ void exportToCsv(const std::string& filename, const std::vector<std::tuple<doubl
 int busqueda_ternaria(int left, int right, size_t M, size_t B, std::string& archivo_entrada, size_t tamano_archivo){
     int min = std::numeric_limits<int>::max();
     int a = 0;
+    
     MergesortExterno mergesort_search(B, M , 0);
     std::string archivo_salida = "busqueda.bin";
   
@@ -118,8 +119,8 @@ int main(int argc, char* argv[]){
     }
     
     std::cout << "Configuración:" << std::endl;
-    std::cout << "- Nombre de archivo de entrada: " << filename << ".bin" << std::endl;
     std::cout << "- Memoria principal (M): " << M / (1024 * 1024) << " MB" << " (" << M << " bytes)" << std::endl;
+    std::cout << "- Tamaño del bloque de disco: " << B << std::endl;
 
     // Paso 1: Calculo de a
     std::string archivo_entrada = filename + ".bin";
@@ -131,7 +132,7 @@ int main(int argc, char* argv[]){
     int a = busqueda_ternaria(2, b, M, B, archivo_entrada, tamano_archivo);
     //int a = 96;
     
-    cout<<"Aridad obtenida: "<< a <<std::endl;
+    cout<< "Aridad obtenida: " << a << std::endl;
 
     std::remove(archivo_entrada.c_str());
 
@@ -145,7 +146,7 @@ int main(int argc, char* argv[]){
     std::vector<std::tuple<int, size_t>> io_quick;
     std::vector<std::tuple<double, size_t>> time_quick;
 
-    // Inicializar algoritmos de ordenamiento
+    // Inicializar estructuras para algoritmos de ordenamiento
     MergesortExterno mergesort(B, M, a);
     QuicksortExterno quicksort(B, M, a); 
 
