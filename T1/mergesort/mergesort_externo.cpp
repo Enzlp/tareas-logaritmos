@@ -1,5 +1,6 @@
 #include "mergesort_externo.hpp"
 
+
 /** 
  * Constructor del mergesort externo, se inicializa declarando el tamaño de bloque, el tamaño de memoria, y la aridad. 
  * Inicializa el contador de I/O en 0, y inicializa un buffer de lectura de tamaño B.
@@ -28,6 +29,8 @@ void MergesortExterno::leerBloque(FILE* archivo, int64_t* bloque, size_t posicio
     (void)ignorado; // Se ignora el valor es solo para que no salgan flags al compilar
     contadorIO++; 
 }
+
+
 
 /**
  * Escritor de bloques de archivo
@@ -242,208 +245,155 @@ void MergesortExterno::mergeArchivos(const std::vector<std::string>& archivos_te
 }
 
 /**
- * Ordena directamente un archivo en memoria cuando es lo suficientemente pequeño
- * @param archivo_entrada nombre del archivo a ordenar
- * @param archivo_salida nombre del archivo de salida
- * @param inicio posición inicial en el archivo
- * @param fin posición final en el archivo
+ * Función recursiva que invoca la subdivisión de archivos y su posterior mezcla para ir ordenando el archivo original.
+ * Si el tamaño del fragmento es lo suficientemente pequeño como para caber en memoria, se ordena directamente. Si no se subdivide, ordena
+ * y luego se fusionan.
+ *
+ * @param archivo_entrada Nombre del archivo actual que se va a subdividir y posteriormente mezclar.
+ * @param archivo_salida Nombre del archivo donde se escribirá la salida ordenada.
+ * @param inicio Índice inicial del segmento del archivo.
+ * @param fin Índice final del archivo.
  */
-void MergesortExterno::ordenarEnMemoria(const std::string& archivo_entrada, const std::string& archivo_salida, size_t inicio, size_t fin) {
+
+/**
+ * Función recursiva que invoca la subdivisión de archivos y su posterior mezcla para ir ordenando el archivo original.
+ * Si el tamaño del fragmento es lo suficientemente pequeño como para caber en memoria, se ordena directamente. 
+ * Si no, se subdivide, ordena y luego se fusionan.
+ *
+ * @param archivo_entrada Nombre del archivo actual que se va a subdividir y posteriormente mezclar.
+ * @param archivo_salida Nombre del archivo donde se escribirá la salida ordenada.
+ * @param inicio Índice inicial del segmento del archivo.
+ * @param fin Índice final del archivo.
+ */
+void MergesortExterno::mergesortRecursivo(const std::string& archivo_entrada, const std::string& archivo_salida, size_t inicio, size_t fin) {
+    // Número de elementos en este archivo actual
     size_t num_elementos = fin - inicio;
-    
-    // Reservar memoria para todos los elementos
-    int64_t* data = new int64_t[num_elementos];
-    
-    // Abrir archivo de entrada
-    FILE* entrada = fopen(archivo_entrada.c_str(), "rb");
-    
-    // Posicionar en el punto de inicio
-    if (fseek(entrada, inicio * sizeof(int64_t), SEEK_SET) != 0) {
-        std::cerr << "Error: No se pudo posicionar en el archivo de entrada" << std::endl;
+
+    // Caso base: si el número de elementos es menor a la memoria, los ordenamos en memoria principal
+    if (num_elementos * sizeof(int64_t) <= M) {
+        
+        // Reservar memoria para todos los elementos
+        int64_t* data = new int64_t[num_elementos];
+        
+        // Abrir archivo de entrada
+        FILE* entrada = fopen(archivo_entrada.c_str(), "rb");
+        
+        // Posicionar en el punto de inicio
+        if (fseek(entrada, inicio * sizeof(int64_t), SEEK_SET) != 0) {
+            std::cerr << "Error: No se pudo posicionar en el archivo de entrada" << std::endl;
+            fclose(entrada);
+            delete[] data;
+            return;
+        }
+        
+        // Leer todos los elementos
+        size_t posicion_data = 0;  // Índice para controlar la posición dentro de 'data'
+        size_t elementos_por_bloque = B / sizeof(int64_t);  // Número de elementos que caben en un bloque
+        size_t elementos_leidos = 0;
+        while (posicion_data < num_elementos) {
+            // Calcula cuántos elementos leer en este bloque
+            size_t elementos_a_leer = std::min(elementos_por_bloque, num_elementos - posicion_data);
+
+            // Lee un bloque del archivo
+            leerBloque(entrada, buffer, posicion_data / elementos_por_bloque);
+
+            // Copia el contenido del buffer a 'data' de forma secuencial
+            memcpy(data + posicion_data, buffer, elementos_a_leer * sizeof(int64_t));
+
+            // Actualiza la posición en 'data'
+            posicion_data += elementos_a_leer;
+            elementos_leidos += elementos_a_leer;
+        }
         fclose(entrada);
+        
+        // Ordenar los datos leídos
+        std::sort(data, data + elementos_leidos);
+        
+        // Escribir los datos ordenados al archivo de salida
+        FILE* salida = fopen(archivo_salida.c_str(), "wb");
+
+        //Escribimos en el archivo desde data
+        posicion_data = 0;  
+        while (posicion_data < elementos_leidos) {
+            // Calcula cuántos elementos a escribir en este bloque
+            size_t elementos_a_escribir = std::min(elementos_por_bloque, elementos_leidos - posicion_data);
+            // Copia el bloque correspondiente en el buffer
+            memcpy(buffer, data + posicion_data, elementos_a_escribir * sizeof(int64_t));
+            // Escribe el bloque en el archivo
+            escribirBloque(salida, buffer, posicion_data / elementos_por_bloque);
+            // Actualiza la posición en 'data'
+            posicion_data += elementos_a_escribir;
+        }
+        fclose(salida);
+        
         delete[] data;
         return;
     }
+
+    // División recursiva: dividimos el archivo en varios subarchivos
+    std::string archivo_base = archivo_salida + "_nivel";
+    std::vector<std::string> nombres_temp = dividirArchivo(archivo_entrada, archivo_base, inicio, fin);
     
-    // Leer todos los elementos
-    size_t posicion_data = 0;  // Índice para controlar la posición dentro de 'data'
-    size_t elementos_por_bloque = B / sizeof(int64_t);  // Número de elementos que caben en un bloque
-    size_t elementos_leidos = 0;
+    // Archivos temporales para almacenar resultados ordenados
+    std::vector<std::string> nombres_ordenados;
     
-    while (posicion_data < num_elementos) {
-        // Calcula cuántos elementos leer en este bloque
-        size_t elementos_a_leer = std::min(elementos_por_bloque, num_elementos - posicion_data);
-
-        // Lee un bloque del archivo
-        leerBloque(entrada, buffer, inicio / elementos_por_bloque + posicion_data / elementos_por_bloque);
-
-        // Copia el contenido del buffer a 'data' de forma secuencial
-        memcpy(data + posicion_data, buffer, elementos_a_leer * sizeof(int64_t));
-
-        // Actualiza la posición en 'data'
-        posicion_data += elementos_a_leer;
-        elementos_leidos += elementos_a_leer;
+    // Calcular elementos por archivo temporal
+    size_t elementos_por_archivo = (num_elementos + a - 1) / a; // Distribución equitativa
+    
+    // Ordenar recursivamente cada archivo temporal
+    for (size_t i = 0; i < nombres_temp.size(); i++) {
+        std::string temp_name = nombres_temp[i];
+        std::string sorted_name = archivo_base + ".sorted" + std::to_string(i);
+        
+        // Calcular el rango para este archivo temporal
+        size_t inicio_temp = 0;
+        size_t fin_temp = elementos_por_archivo;
+        
+        // Si es el último archivo, ajustar el fin
+        if (i == nombres_temp.size() - 1) {
+            // Verificar el tamaño real del último archivo
+            FILE* temp_file = fopen(temp_name.c_str(), "rb");
+            if (temp_file) {
+                fseek(temp_file, 0, SEEK_END);
+                fin_temp = ftell(temp_file) / sizeof(int64_t);
+                fclose(temp_file);
+            }
+        }
+        
+        // Llamada recursiva sobre el archivo temporal
+        mergesortRecursivo(temp_name, sorted_name, inicio_temp, fin_temp);
+        
+        nombres_ordenados.push_back(sorted_name);
     }
-    fclose(entrada);
     
-    // Ordenar los datos leídos
-    std::sort(data, data + elementos_leidos);
+    // Fusión de los archivos temporales ya ordenados
+    mergeArchivos(nombres_ordenados, archivo_salida);
     
-    // Escribir los datos ordenados al archivo de salida
-    FILE* salida = fopen(archivo_salida.c_str(), "wb");
-
-    //Escribimos en el archivo desde data
-    posicion_data = 0;  
-    while (posicion_data < elementos_leidos) {
-        // Calcula cuántos elementos a escribir en este bloque
-        size_t elementos_a_escribir = std::min(elementos_por_bloque, elementos_leidos - posicion_data);
-        // Copia el bloque correspondiente en el buffer
-        memcpy(buffer, data + posicion_data, elementos_a_escribir * sizeof(int64_t));
-        // Escribe el bloque en el archivo
-        escribirBloque(salida, buffer, posicion_data / elementos_por_bloque);
-        // Actualiza la posición en 'data'
-        posicion_data += elementos_a_escribir;
+    // Eliminar los archivos temporales
+    for (const auto& nombre : nombres_temp) {
+        remove(nombre.c_str());
     }
-    fclose(salida);
     
-    delete[] data;
+    for (const auto& nombre : nombres_ordenados) {
+        remove(nombre.c_str());
+    }
 }
 
 /**
- * Versión iterativa del mergesort externo
+ * Invoca a la funcion recursiva
  * @param archivo_entrada nombre del archivo a ordenar
  * @param archivo_salida nombre del archivo a generar con el resultado ya ordenado
- * @param N tamaño del archivo original en bytes
+ * @param N tamaño del archivo original
  */
 void MergesortExterno::mergesort(const std::string& archivo_entrada, const std::string& archivo_salida, size_t N) {
+    // Verificar que el archivo existe y obtener su tamaño real si no se especificó
+    FILE* archivo = fopen(archivo_entrada.c_str(), "rb");
+    
     // Calcular el número real de elementos (int64_t) en el archivo
     size_t num_elementos = N / sizeof(int64_t);
     
-    // Estructura para representar un trabajo pendiente
-    struct Trabajo {
-        std::string archivo_entrada;
-        std::string archivo_salida;
-        size_t inicio;
-        size_t fin;
-        int nivel; // Para rastrear la profundidad del árbol de recursión
-    };
-    
-    // Pila de trabajos pendientes (simula la recursión)
-    std::vector<Trabajo> pila;
-    
-    // Agregar el trabajo inicial
-    pila.push_back({archivo_entrada, archivo_salida, 0, num_elementos, 0});
-    
-    // Lista de archivos temporales creados para limpieza final
-    std::vector<std::string> todos_archivos_temp;
-    
-    // Procesar trabajos hasta que la pila esté vacía
-    while (!pila.empty()) {
-        // Obtener el trabajo actual y eliminarlo de la pila
-        Trabajo trabajo_actual = pila.back();
-        pila.pop_back();
-        
-        // Número de elementos en este archivo
-        size_t elementos_actuales = trabajo_actual.fin - trabajo_actual.inicio;
-        
-        // Caso base: si el número de elementos es menor a la memoria, ordenamos en memoria principal
-        if (elementos_actuales * sizeof(int64_t) <= M) {
-            ordenarEnMemoria(trabajo_actual.archivo_entrada, trabajo_actual.archivo_salida, 
-                              trabajo_actual.inicio, trabajo_actual.fin);
-        } else {
-            // División: dividimos el archivo en varios subarchivos
-            std::string archivo_base = trabajo_actual.archivo_salida + "_nivel" + std::to_string(trabajo_actual.nivel);
-            std::vector<std::string> nombres_temp = dividirArchivo(trabajo_actual.archivo_entrada, archivo_base, 
-                                                                   trabajo_actual.inicio, trabajo_actual.fin);
-            
-            // Almacenar archivos temporales para limpieza posterior
-            todos_archivos_temp.insert(todos_archivos_temp.end(), nombres_temp.begin(), nombres_temp.end());
-            
-            // Calcular elementos por archivo temporal
-            size_t elementos_por_archivo = (elementos_actuales + a - 1) / a; // Distribución equitativa
-            
-            // Nombres para los archivos temporales ordenados
-            std::vector<std::string> nombres_ordenados;
-            
-            // Agregar trabajos para ordenar cada subarchivo (en orden inverso para mantener el orden de procesamiento)
-            for (int i = nombres_temp.size() - 1; i >= 0; i--) {
-                std::string temp_name = nombres_temp[i];
-                std::string sorted_name = archivo_base + ".sorted" + std::to_string(i);
-                nombres_ordenados.push_back(sorted_name);
-                
-                // Calcular el rango para este archivo temporal
-                size_t inicio_temp = 0;
-                size_t fin_temp = elementos_por_archivo;
-                
-                // Si es el último archivo, ajustar el fin al tamaño real
-                if (i == static_cast<int>(nombres_temp.size() - 1)) {
-                    FILE* temp_file = fopen(temp_name.c_str(), "rb");
-                    if (temp_file) {
-                        fseek(temp_file, 0, SEEK_END);
-                        fin_temp = ftell(temp_file) / sizeof(int64_t);
-                        fclose(temp_file);
-                    }
-                }
-                
-                // Agregar trabajo a la pila
-                pila.push_back({temp_name, sorted_name, inicio_temp, fin_temp, trabajo_actual.nivel + 1});
-            }
-            
-            // Revertir el orden para que sea coherente con el orden de proceso
-            std::reverse(nombres_ordenados.begin(), nombres_ordenados.end());
-            
-            // Agregar trabajo para fusionar los subarchivos ordenados (después de que se hayan procesado todos)
-            // Usamos un nivel especial (-1) para identificar los trabajos de fusión
-            pila.insert(pila.begin(), {archivo_base, trabajo_actual.archivo_salida, 0, 0, -1});
-            
-            // Almacenar los nombres de los archivos a fusionar junto con el trabajo
-            // Lo hacemos adjuntando la información al nombre del archivo_base
-            todos_archivos_temp.insert(todos_archivos_temp.end(), nombres_ordenados.begin(), nombres_ordenados.end());
-            
-            // Guardar nombres de archivos a fusionar en el trabajo
-            for (const auto& nombre : nombres_ordenados) {
-                // Almacenamos esta información de manera que podamos recuperarla después
-                // Modificamos el último trabajo agregado (el de fusión)
-                if (pila[0].nivel == -1) {
-                    pila[0].archivo_entrada += "|" + nombre;
-                }
-            }
-        }
-        
-        // Procesar los trabajos de fusión cuando corresponda
-        while (!pila.empty() && pila.back().nivel == -1) {
-            Trabajo trabajo_fusion = pila.back();
-            pila.pop_back();
-            
-            // Extraer los nombres de los archivos a fusionar
-            std::vector<std::string> archivos_a_fusionar;
-            std::string base_nombre = trabajo_fusion.archivo_entrada;
-            size_t pos = base_nombre.find('|');
-            
-            if (pos != std::string::npos) {
-                base_nombre = base_nombre.substr(0, pos);
-                std::string resto = trabajo_fusion.archivo_entrada.substr(pos + 1);
-                
-                // Extraer todos los nombres de archivos
-                size_t start = 0;
-                size_t end = resto.find('|');
-                while (end != std::string::npos) {
-                    archivos_a_fusionar.push_back(resto.substr(start, end - start));
-                    start = end + 1;
-                    end = resto.find('|', start);
-                }
-                archivos_a_fusionar.push_back(resto.substr(start));
-            }
-            
-            // Fusionar los archivos
-            mergeArchivos(archivos_a_fusionar, trabajo_fusion.archivo_salida);
-        }
-    }
-    
-    // Eliminar todos los archivos temporales creados
-    for (const auto& nombre : todos_archivos_temp) {
-        remove(nombre.c_str());
-    }
+    // Llamar a la función recursiva para ordenar el archivo
+    mergesortRecursivo(archivo_entrada, archivo_salida, 0, num_elementos);
 }
 
 /**
@@ -475,9 +425,6 @@ void MergesortExterno::updateMemoria(size_t new_M){
     this->M = new_M;
 }
 
-/** 
- * limpia el buffer de la estructura de datos
- */
 void MergesortExterno::limpiarBuffer(){
     if (buffer != nullptr) {
         size_t tamano_buffer = B / sizeof(int64_t);
