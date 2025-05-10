@@ -157,7 +157,8 @@ void QuicksortExterno::particionarArchivo(const std::string& archivo_entrada,
             } else {
                 // Leer bloque existente
                 fseek(archivos_temp[particion], bloque_particion * B, SEEK_SET);
-                fread(bloque_temp, sizeof(int64_t), elementos_por_bloque, archivos_temp[particion]);
+                size_t leidos = fread(bloque_temp, sizeof(int64_t), elementos_por_bloque, archivos_temp[particion]);
+                (void)leidos; // Evita el warning
                 contador_io++;
             }
             
@@ -199,7 +200,8 @@ void QuicksortExterno::particionarArchivo(const std::string& archivo_entrada,
             size_t elementos_a_leer = std::min(elementos_por_bloque, num_elementos - j);
             
             // Leemos bloque del archivo temporal
-            fread(buffer, sizeof(int64_t), elementos_a_leer, temp);
+            size_t leidos = fread(buffer, sizeof(int64_t), elementos_a_leer, temp);
+            (void)leidos; // Evita el warning
             contador_io++;
             
             // Escribimos en el archivo de salida
@@ -344,7 +346,8 @@ void QuicksortExterno::quicksortRecursivo(const std::string& archivo_entrada,
                 
                 // Leemos el bloque de la partición
                 fseek(particion, (pos - inicio_particion) * sizeof(int64_t), SEEK_SET);
-                fread(buffer, sizeof(int64_t), elementos_a_procesar, particion);
+                size_t leidos = fread(buffer, sizeof(int64_t), elementos_a_procesar, particion);
+                (void)leidos; // Evita el warning
                 contador_io++;
                 
                 // Escribimos en el archivo final
