@@ -9,6 +9,7 @@
 #include "quicksort/quicksort_externo.h"
 #include "file_generator/input_generator.h"       
 #include "misc/block_size.h"      
+using namespace std;
 
 
 //Header
@@ -129,8 +130,8 @@ int main(int argc, char* argv[]){
     size_t tamano_archivo = 60 * M;
     size_t b = B / sizeof(int64_t);
 
-    int a = busqueda_ternaria(2, b, M, B, archivo_entrada, tamano_archivo);
-    //int a = 96;
+    //int a = busqueda_ternaria(2, b, M, B, archivo_entrada, tamano_archivo);
+    int a = 200;
     
     cout<< "Aridad obtenida: " << a << std::endl;
 

@@ -1,5 +1,6 @@
 #include "mergesort_externo.hpp"
-
+#include <queue>
+#include <stack>
 
 /** 
  * Constructor del mergesort externo, se inicializa declarando el tamaño de bloque, el tamaño de memoria, y la aridad. 
@@ -29,8 +30,6 @@ void MergesortExterno::leerBloque(FILE* archivo, int64_t* bloque, size_t posicio
     (void)ignorado; // Se ignora el valor es solo para que no salgan flags al compilar
     contadorIO++; 
 }
-
-
 
 /**
  * Escritor de bloques de archivo
@@ -116,6 +115,73 @@ std::vector<std::string> MergesortExterno::dividirArchivo(const std::string& arc
     }
     
     return nombres_temp;
+}
+
+/**
+ * Ordena un pequeño archivo que cabe en memoria
+ * @param archivo_entrada Nombre del archivo a ordenar
+ * @param archivo_salida Nombre del archivo de salida
+ * @param inicio Índice inicial en el archivo
+ * @param fin Índice final en el archivo
+ */
+void MergesortExterno::ordenarEnMemoria(const std::string& archivo_entrada, const std::string& archivo_salida, size_t inicio, size_t fin) {
+    size_t num_elementos = fin - inicio;
+    
+    // Reservar memoria para todos los elementos
+    int64_t* data = new int64_t[num_elementos];
+    
+    // Abrir archivo de entrada
+    FILE* entrada = fopen(archivo_entrada.c_str(), "rb");
+    
+    // Posicionar en el punto de inicio
+    if (fseek(entrada, inicio * sizeof(int64_t), SEEK_SET) != 0) {
+        std::cerr << "Error: No se pudo posicionar en el archivo de entrada" << std::endl;
+        fclose(entrada);
+        delete[] data;
+        return;
+    }
+    
+    // Leer todos los elementos
+    size_t posicion_data = 0;  // Índice para controlar la posición dentro de 'data'
+    size_t elementos_por_bloque = B / sizeof(int64_t);  // Número de elementos que caben en un bloque
+    size_t elementos_leidos = 0;
+    while (posicion_data < num_elementos) {
+        // Calcula cuántos elementos leer en este bloque
+        size_t elementos_a_leer = std::min(elementos_por_bloque, num_elementos - posicion_data);
+
+        // Lee un bloque del archivo
+        leerBloque(entrada, buffer, posicion_data / elementos_por_bloque);
+
+        // Copia el contenido del buffer a 'data' de forma secuencial
+        memcpy(data + posicion_data, buffer, elementos_a_leer * sizeof(int64_t));
+
+        // Actualiza la posición en 'data'
+        posicion_data += elementos_a_leer;
+        elementos_leidos += elementos_a_leer;
+    }
+    fclose(entrada);
+    
+    // Ordenar los datos leídos
+    std::sort(data, data + elementos_leidos);
+    
+    // Escribir los datos ordenados al archivo de salida
+    FILE* salida = fopen(archivo_salida.c_str(), "wb");
+
+    //Escribimos en el archivo desde data
+    posicion_data = 0;  
+    while (posicion_data < elementos_leidos) {
+        // Calcula cuántos elementos a escribir en este bloque
+        size_t elementos_a_escribir = std::min(elementos_por_bloque, elementos_leidos - posicion_data);
+        // Copia el bloque correspondiente en el buffer
+        memcpy(buffer, data + posicion_data, elementos_a_escribir * sizeof(int64_t));
+        // Escribe el bloque en el archivo
+        escribirBloque(salida, buffer, posicion_data / elementos_por_bloque);
+        // Actualiza la posición en 'data'
+        posicion_data += elementos_a_escribir;
+    }
+    fclose(salida);
+    
+    delete[] data;
 }
 
 /**
@@ -244,146 +310,153 @@ void MergesortExterno::mergeArchivos(const std::vector<std::string>& archivos_te
     }
 }
 
-
 /**
- * Función recursiva que invoca la subdivisión de archivos y su posterior mezcla para ir ordenando el archivo original.
- * Si el tamaño del fragmento es lo suficientemente pequeño como para caber en memoria, se ordena directamente. 
- * Si no, se subdivide, ordena y luego se fusionan.
- *
- * @param archivo_entrada Nombre del archivo actual que se va a subdividir y posteriormente mezclar.
- * @param archivo_salida Nombre del archivo donde se escribirá la salida ordenada.
- * @param inicio Índice inicial del segmento del archivo.
- * @param fin Índice final del archivo.
+ * Estructura para manejar fragmentos de archivos en el proceso iterativo
  */
-void MergesortExterno::mergesortRecursivo(const std::string& archivo_entrada, const std::string& archivo_salida, size_t inicio, size_t fin) {
-    // Número de elementos en este archivo actual
-    size_t num_elementos = fin - inicio;
-
-    // Caso base: si el número de elementos es menor a la memoria, los ordenamos en memoria principal
-    if (num_elementos * sizeof(int64_t) <= M) {
-        
-        // Reservar memoria para todos los elementos
-        int64_t* data = new int64_t[num_elementos];
-        
-        // Abrir archivo de entrada
-        FILE* entrada = fopen(archivo_entrada.c_str(), "rb");
-        
-        // Posicionar en el punto de inicio
-        if (fseek(entrada, inicio * sizeof(int64_t), SEEK_SET) != 0) {
-            std::cerr << "Error: No se pudo posicionar en el archivo de entrada" << std::endl;
-            fclose(entrada);
-            delete[] data;
-            return;
-        }
-        
-        // Leer todos los elementos
-        size_t posicion_data = 0;  // Índice para controlar la posición dentro de 'data'
-        size_t elementos_por_bloque = B / sizeof(int64_t);  // Número de elementos que caben en un bloque
-        size_t elementos_leidos = 0;
-        while (posicion_data < num_elementos) {
-            // Calcula cuántos elementos leer en este bloque
-            size_t elementos_a_leer = std::min(elementos_por_bloque, num_elementos - posicion_data);
-
-            // Lee un bloque del archivo
-            leerBloque(entrada, buffer, posicion_data / elementos_por_bloque);
-
-            // Copia el contenido del buffer a 'data' de forma secuencial
-            memcpy(data + posicion_data, buffer, elementos_a_leer * sizeof(int64_t));
-
-            // Actualiza la posición en 'data'
-            posicion_data += elementos_a_leer;
-            elementos_leidos += elementos_a_leer;
-        }
-        fclose(entrada);
-        
-        // Ordenar los datos leídos
-        std::sort(data, data + elementos_leidos);
-        
-        // Escribir los datos ordenados al archivo de salida
-        FILE* salida = fopen(archivo_salida.c_str(), "wb");
-
-        //Escribimos en el archivo desde data
-        posicion_data = 0;  
-        while (posicion_data < elementos_leidos) {
-            // Calcula cuántos elementos a escribir en este bloque
-            size_t elementos_a_escribir = std::min(elementos_por_bloque, elementos_leidos - posicion_data);
-            // Copia el bloque correspondiente en el buffer
-            memcpy(buffer, data + posicion_data, elementos_a_escribir * sizeof(int64_t));
-            // Escribe el bloque en el archivo
-            escribirBloque(salida, buffer, posicion_data / elementos_por_bloque);
-            // Actualiza la posición en 'data'
-            posicion_data += elementos_a_escribir;
-        }
-        fclose(salida);
-        
-        delete[] data;
-        return;
-    }
-
-    // División recursiva: dividimos el archivo en varios subarchivos
-    std::string archivo_base = archivo_salida + "_nivel";
-    std::vector<std::string> nombres_temp = dividirArchivo(archivo_entrada, archivo_base, inicio, fin);
-    
-    // Archivos temporales para almacenar resultados ordenados
-    std::vector<std::string> nombres_ordenados;
-    
-    // Calcular elementos por archivo temporal
-    size_t elementos_por_archivo = (num_elementos + a - 1) / a; // Distribución equitativa
-    
-    // Ordenar recursivamente cada archivo temporal
-    for (size_t i = 0; i < nombres_temp.size(); i++) {
-        std::string temp_name = nombres_temp[i];
-        std::string sorted_name = archivo_base + ".sorted" + std::to_string(i);
-        
-        // Calcular el rango para este archivo temporal
-        size_t inicio_temp = 0;
-        size_t fin_temp = elementos_por_archivo;
-        
-        // Si es el último archivo, ajustar el fin
-        if (i == nombres_temp.size() - 1) {
-            // Verificar el tamaño real del último archivo
-            FILE* temp_file = fopen(temp_name.c_str(), "rb");
-            if (temp_file) {
-                fseek(temp_file, 0, SEEK_END);
-                fin_temp = ftell(temp_file) / sizeof(int64_t);
-                fclose(temp_file);
-            }
-        }
-        
-        // Llamada recursiva sobre el archivo temporal
-        mergesortRecursivo(temp_name, sorted_name, inicio_temp, fin_temp);
-        
-        nombres_ordenados.push_back(sorted_name);
-    }
-    
-    // Fusión de los archivos temporales ya ordenados
-    mergeArchivos(nombres_ordenados, archivo_salida);
-    
-    // Eliminar los archivos temporales
-    for (const auto& nombre : nombres_temp) {
-        remove(nombre.c_str());
-    }
-    
-    for (const auto& nombre : nombres_ordenados) {
-        remove(nombre.c_str());
-    }
-}
+struct FragmentoArchivo {
+    std::string nombre;
+    size_t inicio;
+    size_t fin;
+};
 
 /**
- * Invoca a la funcion recursiva
- * @param archivo_entrada nombre del archivo a ordenar
- * @param archivo_salida nombre del archivo a generar con el resultado ya ordenado
- * @param N tamaño del archivo original
+ * Implementación iterativa del algoritmo MergeSort externo
+ * @param archivo_entrada Nombre del archivo a ordenar
+ * @param archivo_salida Nombre del archivo de salida ordenado
+ * @param N Tamaño del archivo en bytes
  */
 void MergesortExterno::mergesort(const std::string& archivo_entrada, const std::string& archivo_salida, size_t N) {
     // Verificar que el archivo existe y obtener su tamaño real si no se especificó
     FILE* archivo = fopen(archivo_entrada.c_str(), "rb");
+    if (!archivo) {
+        std::cerr << "Error: No se pudo abrir el archivo de entrada" << std::endl;
+        return;
+    }
+    fclose(archivo);
     
     // Calcular el número real de elementos (int64_t) en el archivo
     size_t num_elementos = N / sizeof(int64_t);
     
-    // Llamar a la función recursiva para ordenar el archivo
-    mergesortRecursivo(archivo_entrada, archivo_salida, 0, num_elementos);
+    // Cola para almacenar los fragmentos del archivo que debemos procesar
+    std::queue<FragmentoArchivo> fragmentos_por_procesar;
+    
+    // Iniciar con el archivo completo
+    fragmentos_por_procesar.push({archivo_entrada, 0, num_elementos});
+    
+    // Contador para generar nombres únicos para archivos temporales
+    int contador_temp = 0;
+    
+    // Cola para almacenar los archivos ya procesados (ordenados)
+    std::queue<std::string> archivos_ordenados;
+    
+    // Procesar los fragmentos iterativamente
+    while (!fragmentos_por_procesar.empty()) {
+        FragmentoArchivo fragmento_actual = fragmentos_por_procesar.front();
+        fragmentos_por_procesar.pop();
+        
+        std::string archivo_actual = fragmento_actual.nombre;
+        size_t inicio = fragmento_actual.inicio;
+        size_t fin = fragmento_actual.fin;
+        size_t num_elementos_fragmento = fin - inicio;
+        
+        // Caso base: si el fragmento cabe en memoria, lo ordenamos directamente
+        if (num_elementos_fragmento * sizeof(int64_t) <= M) {
+            std::string archivo_ordenado = archivo_salida + ".sorted_" + std::to_string(contador_temp++);
+            ordenarEnMemoria(archivo_actual, archivo_ordenado, inicio, fin);
+            archivos_ordenados.push(archivo_ordenado);
+            
+            // Si el archivo actual es temporal (no es el original), lo eliminamos
+            if (archivo_actual != archivo_entrada) {
+                remove(archivo_actual.c_str());
+            }
+        } else {
+            // Dividir el fragmento en subfragmentos según la aridad
+            std::string base_temporal = archivo_salida + ".temp_" + std::to_string(contador_temp++);
+            std::vector<std::string> nombres_temp = dividirArchivo(archivo_actual, base_temporal, inicio, fin);
+            
+            // Si el archivo actual es temporal (no es el original), lo eliminamos
+            if (archivo_actual != archivo_entrada) {
+                remove(archivo_actual.c_str());
+            }
+            
+            // Calcular elementos por subfragmento
+            size_t elementos_por_subfragmento = (num_elementos_fragmento + a - 1) / a;
+            
+            // Añadir cada subfragmento a la cola para procesarlo
+            for (size_t i = 0; i < nombres_temp.size(); i++) {
+                size_t inicio_subfragmento = 0;
+                size_t fin_subfragmento;
+                
+                // Para el último subfragmento, verificar su tamaño real
+                if (i == nombres_temp.size() - 1) {
+                    FILE* temp_file = fopen(nombres_temp[i].c_str(), "rb");
+                    if (temp_file) {
+                        fseek(temp_file, 0, SEEK_END);
+                        fin_subfragmento = ftell(temp_file) / sizeof(int64_t);
+                        fclose(temp_file);
+                    } else {
+                        fin_subfragmento = elementos_por_subfragmento;
+                    }
+                } else {
+                    fin_subfragmento = elementos_por_subfragmento;
+                }
+                
+                fragmentos_por_procesar.push({nombres_temp[i], inicio_subfragmento, fin_subfragmento});
+            }
+        }
+    }
+    
+    // Ahora tenemos una cola de archivos ordenados, los fusionamos de a pares hasta que quede uno solo
+    while (archivos_ordenados.size() > 1) {
+        std::vector<std::string> grupo_fusion;
+        
+        // Tomamos hasta 'a' archivos para fusionarlos
+        for (size_t i = 0; i < a && !archivos_ordenados.empty(); i++) {
+            grupo_fusion.push_back(archivos_ordenados.front());
+            archivos_ordenados.pop();
+        }
+        
+        // Nombre del archivo resultante de la fusión
+        std::string archivo_fusionado = archivo_salida + ".merged_" + std::to_string(contador_temp++);
+        
+        // Fusionar los archivos
+        mergeArchivos(grupo_fusion, archivo_fusionado);
+        
+        // Añadir el archivo fusionado a la cola
+        archivos_ordenados.push(archivo_fusionado);
+        
+        // Eliminar los archivos ya fusionados
+        for (const auto& nombre : grupo_fusion) {
+            remove(nombre.c_str());
+        }
+    }
+    
+    // Al final solo queda un archivo ordenado, lo renombramos al nombre de salida deseado
+    if (!archivos_ordenados.empty()) {
+        std::string ultimo_archivo = archivos_ordenados.front();
+        
+        // En sistemas POSIX podríamos usar rename(), pero para mayor compatibilidad:
+        FILE* src = fopen(ultimo_archivo.c_str(), "rb");
+        FILE* dst = fopen(archivo_salida.c_str(), "wb");
+        
+        if (src && dst) {
+            // Copiar contenido
+            size_t elementos_por_bloque = B / sizeof(int64_t);
+            while (true) {
+                size_t leidos = fread(buffer, sizeof(int64_t), elementos_por_bloque, src);
+                if (leidos == 0) break;
+                
+                fwrite(buffer, sizeof(int64_t), leidos, dst);
+                contadorIO += 2; // Contar operaciones I/O (lectura y escritura)
+            }
+        }
+        
+        if (src) fclose(src);
+        if (dst) fclose(dst);
+        
+        // Eliminar el último archivo temporal
+        remove(ultimo_archivo.c_str());
+    }
 }
 
 /**
@@ -408,12 +481,6 @@ void MergesortExterno::updateAridad(size_t new_a){
     this->a = new_a;
 }
 
-/** 
- * Actualiza el valor de memoria principal M
- */
-void MergesortExterno::updateMemoria(size_t new_M){
-    this->M = new_M;
-}
 
 /** 
  * limpia el buffer de la estructura de datos
