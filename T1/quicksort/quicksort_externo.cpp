@@ -20,7 +20,8 @@ QuicksortExterno::~QuicksortExterno() {
 
 void QuicksortExterno::leerBloque(FILE* archivo, int64_t* bloque, size_t posicion) {
     fseek(archivo, posicion * B, SEEK_SET);
-    fread(bloque, sizeof(int64_t), B / sizeof(int64_t), archivo);
+    size_t ignorado = fread(bloque, sizeof(int64_t), B / sizeof(int64_t), archivo);
+    (void)ignorado; // Se ignora el valor para que no salgan flags al compilar    
     contador_io++;
 }
 
