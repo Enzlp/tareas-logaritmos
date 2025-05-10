@@ -1,167 +1,138 @@
-// Quicksort Externo V2 - mas optimizado
-// Particionamiento más directo
-// Mejor manejo de archivos temporales con nombres más simples
-// Simplificación de la recursión
-// Reducción de código redundante
+// quicksort_externo.cpp V1
+// Implementación de QuicksortExterno
 
-// quicksort_externo.cpp
 #include "quicksort_externo.h"
 #include <algorithm>
+#include <cstdlib>
 #include <cstring>
+#include <vector>
 #include <random>
 #include <iostream>
 
-/**
- * @brief Constructor de la clase QuicksortExterno.
- * @param tamano_bloque El tamaño del bloque (B) para operaciones de disco, en bytes.
- * @param memoria_maxima El tamaño máximo de memoria principal (M) disponible, en bytes.
- * @param aridad El número de subarreglos (a) a utilizar.
- */
 QuicksortExterno::QuicksortExterno(size_t tamano_bloque, size_t memoria_maxima, size_t aridad) 
     : B(tamano_bloque), M(memoria_maxima), a(aridad), contador_io(0) {
     buffer = new int64_t[B / sizeof(int64_t)];
 }
 
-/**
- * @brief Destructor de la clase QuicksortExterno.
- * Libera la memoria asignada para el buffer.
- */
 QuicksortExterno::~QuicksortExterno() {
     delete[] buffer;
 }
 
-/**
- * @brief Lee un bloque de datos desde un archivo.
- * @param archivo Puntero al descriptor del archivo (FILE*) abierto en modo binario para lectura.
- * @param bloque (Salida) Puntero al array donde se cargarán los datos leídos. Su tamaño debe ser B/sizeof(int64_t).
- * @param posicion Número de bloque a leer (0-indexado). La posición real en bytes es posicion * B.
- */
 void QuicksortExterno::leerBloque(FILE* archivo, int64_t* bloque, size_t posicion) {
     fseek(archivo, posicion * B, SEEK_SET);
-    size_t ignorado = fread(bloque, sizeof(int64_t), B / sizeof(int64_t), archivo);
-    (void)ignorado; // Se ignora el valor para que no salgan flags al compilar
+    fread(bloque, sizeof(int64_t), B / sizeof(int64_t), archivo);
     contador_io++;
 }
 
-/**
- * @brief Escribe un bloque de datos en un archivo.
- * @param archivo Puntero al descriptor del archivo (FILE*) abierto en modo binario para escritura.
- * @param bloque Puntero al array que contiene los datos a escribir. Su tamaño debe ser B/sizeof(int64_t).
- * @param posicion Número de bloque donde se escribirán los datos (0-indexado). La posición real en bytes es posicion * B.
- */
 void QuicksortExterno::escribirBloque(FILE* archivo, int64_t* bloque, size_t posicion) {
     fseek(archivo, posicion * B, SEEK_SET);
     fwrite(bloque, sizeof(int64_t), B / sizeof(int64_t), archivo);
     contador_io++;
 }
 
-/**
- * @brief Selecciona 'a-1' pivotes desde un rango de un archivo.
- * Lee un bloque aleatorio del archivo dentro del rango [inicio, fin),
- * toma 'a-1' elementos al azar de ese bloque, los ordena y los devuelve.
- * @param archivo Nombre del archivo del cual seleccionar los pivotes.
- * @param inicio Índice del primer elemento del rango (inclusive) en el archivo.
- * @param fin Índice del último elemento del rango (exclusive) en el archivo.
- * @return Un puntero a un array de 'a-1' int64_t que son los pivotes seleccionados y ordenados.
- * Retorna nullptr si no hay suficientes elementos para seleccionar pivotes o si a <= 1.
- * El llamador es responsable de liberar la memoria de este array.
- */
 int64_t* QuicksortExterno::seleccionarPivotes(const std::string& archivo, size_t inicio, size_t fin) {
-    if (fin - inicio <= a) {
-        return nullptr;  // No hay suficientes elementos para seleccionar pivotes
+    // Calculamos el tamaño del rango
+    size_t tamano = fin - inicio;
+    
+    // Si el tamaño es pequeño, no podemos seleccionar suficientes pivotes
+    if (tamano <= a) {
+        return nullptr;
     }
     
-    // Seleccionar bloque aleatorio
+    // Seleccionamos un bloque aleatorio
     std::random_device rd;
     std::mt19937 gen(rd());
     std::uniform_int_distribution<size_t> dis(inicio, fin - 1);
-    size_t elementos_por_bloque = B / sizeof(int64_t);
-    size_t bloque_aleatorio = dis(gen) / elementos_por_bloque;
+    size_t bloque_aleatorio = dis(gen) / (B / sizeof(int64_t));
     
-    // Leer el bloque
+    // Nos aseguramos de que el bloque está dentro del rango
+    bloque_aleatorio = std::max(inicio / (B / sizeof(int64_t)), 
+                             std::min(bloque_aleatorio, (fin - 1) / (B / sizeof(int64_t))));
+    
+    // Leemos el bloque aleatorio
     FILE* archivo_ptr = fopen(archivo.c_str(), "rb");
-    int64_t* bloque = new int64_t[elementos_por_bloque];
+    int64_t* bloque = new int64_t[B / sizeof(int64_t)];
     leerBloque(archivo_ptr, bloque, bloque_aleatorio);
     fclose(archivo_ptr);
     
-    // Seleccionar a-1 elementos aleatorios como pivotes
-    int64_t* pivotes = new int64_t[a - 1];
-    size_t max_pivotes = std::min(a - 1, elementos_por_bloque);
+    // Copiamos el bloque (para no modificar el original)
+    int64_t* copia_bloque = new int64_t[B / sizeof(int64_t)];
+    memcpy(copia_bloque, bloque, B);
+    delete[] bloque;
     
-    // Crear vector de índices y mezclarlos
-    std::vector<size_t> indices(elementos_por_bloque);
+    // Seleccionanmos (a-1) pivotes
+    size_t elementos_por_bloque = B / sizeof(int64_t);
+    int64_t* pivotes = new int64_t[a - 1];
+    
+    // Seleccionamos aleatoriamente (a-1) elementos como pivotes
+    std::vector<size_t> indices;
     for (size_t i = 0; i < elementos_por_bloque; i++) {
-        indices[i] = i;
+        indices.push_back(i);
     }
+    
+    // Mezclamos y tomamos los primeros a-1 elementos
     std::shuffle(indices.begin(), indices.end(), gen);
     
-    // Tomar los primeros a-1 elementos como pivotes
-    for (size_t i = 0; i < max_pivotes; i++) {
-        pivotes[i] = bloque[indices[i]];
+    for (size_t i = 0; i < a - 1 && i < indices.size(); i++) {
+        pivotes[i] = copia_bloque[indices[i]];
     }
     
-    // Ordenar los pivotes
-    std::sort(pivotes, pivotes + max_pivotes);
+    // Ordenamos los pivotes
+    std::sort(pivotes, pivotes + a - 1);
     
-    delete[] bloque;
+    delete[] copia_bloque;
     return pivotes;
 }
 
-/**
- * @brief Particiona un segmento de un archivo en 'a' sub-archivos (particiones) usando los pivotes dados.
- * Lee el archivo de entrada bloque por bloque, y para cada elemento, determina a qué partición
- * pertenece basado en los pivotes, y lo escribe en el archivo temporal correspondiente.
- * @param archivo_entrada Nombre del archivo que contiene los datos a particionar.
- * @param archivos_particiones (Entrada/Salida) Array de strings con los nombres de los archivos temporales
- * que se crearán para cada una de las 'a' particiones.
- * @param inicio Índice del primer elemento del segmento a particionar en archivo_entrada.
- * @param fin Índice del último elemento (exclusive) del segmento a particionar.
- * @param pivotes Array de 'num_pivotes' (debe ser a-1) valores pivote, ordenados ascendentemente.
- * @param num_pivotes Número de pivotes efectivos en el array 'pivotes'.
- * @param tamanos_particiones (Salida) Array donde se almacenarán los tamaños (en número de elementos)
- * de cada una de las 'a' (o num_pivotes + 1) particiones generadas.
- */
 void QuicksortExterno::particionarArchivo(const std::string& archivo_entrada, 
-                                       std::string* archivos_particiones,
-                                       size_t inicio, size_t fin, 
-                                       int64_t* pivotes, size_t num_pivotes,
-                                       size_t* tamanos_particiones) {
-    size_t elementos_por_bloque = B / sizeof(int64_t);
-    size_t num_particiones = num_pivotes + 1;
-    
-    // Inicializar contadores de particiones
-    std::fill(tamanos_particiones, tamanos_particiones + num_particiones, 0);
-    
-    // Abrir archivos para las particiones
-    FILE** archivos = new FILE*[num_particiones];
-    for (size_t i = 0; i < num_particiones; i++) {
-        archivos[i] = fopen(archivos_particiones[i].c_str(), "wb");
+                                      const std::string& archivo_salida,
+                                      size_t inicio, size_t fin, 
+                                      int64_t* pivotes, size_t num_pivotes) {
+    if (num_pivotes == 0 || pivotes == nullptr) {
+        // Si no hay pivotes, simplemente copiamos el archivo
+        FILE* entrada = fopen(archivo_entrada.c_str(), "rb");
+        FILE* salida = fopen(archivo_salida.c_str(), "wb");
+        
+        size_t elementos_por_bloque = B / sizeof(int64_t);
+        size_t num_bloques = (fin - inicio + elementos_por_bloque - 1) / elementos_por_bloque;
+        
+        for (size_t i = 0; i < num_bloques; i++) {
+            leerBloque(entrada, buffer, inicio / elementos_por_bloque + i);
+            escribirBloque(salida, buffer, inicio / elementos_por_bloque + i);
+        }
+        
+        fclose(entrada);
+        fclose(salida);
+        return;
     }
     
-    // Abrir archivo de entrada
+    // Creamos archivos temporales para cada partición
+    std::vector<FILE*> archivos_temp;
+    for (size_t i = 0; i <= num_pivotes; i++) {
+        std::string nombre_temp = archivo_salida + ".temp" + std::to_string(i);
+        FILE* temp = fopen(nombre_temp.c_str(), "wb+");
+        archivos_temp.push_back(temp);
+    }
+    
+    // Abrimos archivo de entrada
     FILE* entrada = fopen(archivo_entrada.c_str(), "rb");
     
-    // Leer datos y clasificarlos según los pivotes
-    int64_t* bloque_entrada = new int64_t[elementos_por_bloque];
-    int64_t** bloques_salida = new int64_t*[num_particiones];
-    size_t* posiciones_escritura = new size_t[num_particiones]();
+    // Tamaño de elementos por bloque
+    size_t elementos_por_bloque = B / sizeof(int64_t);
     
-    // Inicializar buffers de salida
-    for (size_t i = 0; i < num_particiones; i++) {
-        bloques_salida[i] = new int64_t[elementos_por_bloque]();
-    }
+    // Contador para seguir cuántos elementos van en cada partición
+    std::vector<size_t> contadores(num_pivotes + 1, 0);
     
-    // Procesar archivo bloque por bloque
+    // Leemos los datos y los clasificamos según los pivotes
     for (size_t pos = inicio; pos < fin; pos += elementos_por_bloque) {
-        // Leer un bloque
-        size_t bloque_actual = pos / elementos_por_bloque;
-        leerBloque(entrada, bloque_entrada, bloque_actual);
+        // Leemos un bloque
+        leerBloque(entrada, buffer, pos / elementos_por_bloque);
         
-        // Procesar cada elemento del bloque
+        // Procesamos cada elemento del bloque
         size_t elementos_a_procesar = std::min(elementos_por_bloque, fin - pos);
         
         for (size_t i = 0; i < elementos_a_procesar; i++) {
-            int64_t elemento = bloque_entrada[i];
+            int64_t elemento = buffer[i];
             
             // Encontrar la partición correcta
             size_t particion = 0;
@@ -169,100 +140,113 @@ void QuicksortExterno::particionarArchivo(const std::string& archivo_entrada,
                 particion++;
             }
             
-            // Agregar al buffer de la partición
-            bloques_salida[particion][posiciones_escritura[particion]++] = elemento;
-            tamanos_particiones[particion]++;
+            // Calculamos la posición en la partición
+            size_t posicion_particion = contadores[particion]++;
             
-            // Si el buffer está lleno, escribirlo en disco
-            if (posiciones_escritura[particion] == elementos_por_bloque) {
-                escribirBloque(archivos[particion], bloques_salida[particion], 
-                              tamanos_particiones[particion] / elementos_por_bloque - 1);
-                posiciones_escritura[particion] = 0;
+            // Calculamos en qué bloque va
+            size_t bloque_particion = posicion_particion / elementos_por_bloque;
+            size_t offset_particion = posicion_particion % elementos_por_bloque;
+            
+            // Leeemos el bloque si es necesario
+            int64_t* bloque_temp = new int64_t[elementos_por_bloque]();
+            
+            if (offset_particion == 0 || posicion_particion == 0) {
+                // Primer elemento del bloque, inicializar bloque
+                memset(bloque_temp, 0, B);
+            } else {
+                // Leer bloque existente
+                fseek(archivos_temp[particion], bloque_particion * B, SEEK_SET);
+                fread(bloque_temp, sizeof(int64_t), elementos_por_bloque, archivos_temp[particion]);
+                contador_io++;
             }
+            
+            // Insertar elemento
+            bloque_temp[offset_particion] = elemento;
+            
+            // Escribimos en el bloque
+            fseek(archivos_temp[particion], bloque_particion * B, SEEK_SET);
+            fwrite(bloque_temp, sizeof(int64_t), elementos_por_bloque, archivos_temp[particion]);
+            contador_io++;
+            
+            delete[] bloque_temp;
         }
     }
     
-    // Escribir los buffers restantes
-    for (size_t i = 0; i < num_particiones; i++) {
-        if (posiciones_escritura[i] > 0) {
-            // Limpiar el resto del buffer
-            if (posiciones_escritura[i] < elementos_por_bloque) {
-                memset(bloques_salida[i] + posiciones_escritura[i], 0, 
-                      (elementos_por_bloque - posiciones_escritura[i]) * sizeof(int64_t));
-            }
-            
-            escribirBloque(archivos[i], bloques_salida[i], 
-                          tamanos_particiones[i] / elementos_por_bloque);
-        }
-    }
-    
-    // Cerrar archivos y liberar memoria
     fclose(entrada);
-    for (size_t i = 0; i < num_particiones; i++) {
-        fclose(archivos[i]);
-        delete[] bloques_salida[i];
+    
+    // Cerramos archivos temporales
+    for (auto& archivo : archivos_temp) {
+        fclose(archivo);
     }
     
-    delete[] bloque_entrada;
-    delete[] bloques_salida;
-    delete[] posiciones_escritura;
-    delete[] archivos;
+    // Concatenamos archivos temporales en el archivo de salida
+    FILE* salida = fopen(archivo_salida.c_str(), "wb");
+    size_t pos_actual = inicio;
+    
+    for (size_t i = 0; i <= num_pivotes; i++) {
+        std::string nombre_temp = archivo_salida + ".temp" + std::to_string(i);
+        FILE* temp = fopen(nombre_temp.c_str(), "rb");
+        
+        // Obtenemos el tamaño del archivo
+        fseek(temp, 0, SEEK_END);
+        size_t tamano_archivo = ftell(temp);
+        size_t num_elementos = tamano_archivo / sizeof(int64_t);
+        fseek(temp, 0, SEEK_SET);
+        
+        // Leemos y escribimos por bloques
+        for (size_t j = 0; j < num_elementos; j += elementos_por_bloque) {
+            size_t elementos_a_leer = std::min(elementos_por_bloque, num_elementos - j);
+            
+            // Leemos bloque del archivo temporal
+            fread(buffer, sizeof(int64_t), elementos_a_leer, temp);
+            contador_io++;
+            
+            // Escribimos en el archivo de salida
+            fwrite(buffer, sizeof(int64_t), elementos_a_leer, salida);
+            contador_io++;
+            
+            pos_actual += elementos_a_leer;
+        }
+        
+        fclose(temp);
+        remove(nombre_temp.c_str());
+    }
+    
+    fclose(salida);
 }
 
-/**
- * @brief Implementación recursiva de Quicksort Externo.
- * Si el segmento [inicio, fin) del archivo_entrada cabe en memoria (<= M bytes),
- * se lee, se ordena en memoria usando std::sort, y se escribe en archivo_salida.
- * Si es más grande, se seleccionan pivotes, se particiona archivo_entrada en archivos temporales,
- * se llama recursivamente a quicksortRecursivo para cada partición, y finalmente
- * se concatenan las particiones ordenadas en archivo_salida.
- * @param archivo_entrada Nombre del archivo (o partición) que se va a ordenar.
- * @param archivo_salida Nombre del archivo donde se escribirá el resultado ordenado.
- * @param inicio Índice del primer elemento (inclusive) del segmento a ordenar.
- * @param fin Índice del último elemento (exclusive) del segmento a ordenar.
- */
 void QuicksortExterno::quicksortRecursivo(const std::string& archivo_entrada, 
                                        const std::string& archivo_salida,
                                        size_t inicio, size_t fin) {
-    // Calcular el número de elementos en este rango
+    // Calculamos el número de elementos en este rango
     size_t num_elementos = fin - inicio;
     size_t elementos_por_bloque = B / sizeof(int64_t);
     
-    // Si el tamaño es menor o igual a M, ordenar en memoria principal
+    // Si el tamaño es menor o igual a M, ordenamos en memoria principal
     if (num_elementos * sizeof(int64_t) <= M) {
-        // Leer todos los elementos en memoria
+        // Leemos todos los elementos en memoria
         int64_t* datos = new int64_t[num_elementos];
         FILE* entrada = fopen(archivo_entrada.c_str(), "rb");
         
+        // Leemos por bloques
         for (size_t pos = inicio; pos < fin; pos += elementos_por_bloque) {
-            size_t bloque_actual = pos / elementos_por_bloque;
-            leerBloque(entrada, buffer, bloque_actual);
-            
-            size_t offset_bloque = pos % elementos_por_bloque;
-            size_t elementos_a_copiar = std::min(elementos_por_bloque - offset_bloque, fin - pos);
-            
-            memcpy(datos + (pos - inicio), buffer + offset_bloque, 
-                  elementos_a_copiar * sizeof(int64_t));
+            size_t elementos_a_leer = std::min(elementos_por_bloque, fin - pos);
+            leerBloque(entrada, buffer, pos / elementos_por_bloque);
+            memcpy(datos + (pos - inicio), buffer, elementos_a_leer * sizeof(int64_t));
         }
         
         fclose(entrada);
         
-        // Ordenar en memoria
+        // Ordenamos en memoria
         std::sort(datos, datos + num_elementos);
         
-        // Escribir datos ordenados
+        // Escribimos los datos ordenados
         FILE* salida = fopen(archivo_salida.c_str(), "wb");
         
-        for (size_t pos = 0; pos < num_elementos; pos += elementos_por_bloque) {
-            size_t elementos_a_escribir = std::min(elementos_por_bloque, num_elementos - pos);
-            memcpy(buffer, datos + pos, elementos_a_escribir * sizeof(int64_t));
-            
-            // Llenar el resto del buffer con ceros si es necesario
-            if (elementos_a_escribir < elementos_por_bloque) {
-                memset(buffer + elementos_a_escribir, 0, 
-                      (elementos_por_bloque - elementos_a_escribir) * sizeof(int64_t));
-            }
-            
+        // Escribimos por bloques
+        for (size_t pos = inicio; pos < fin; pos += elementos_por_bloque) {
+            size_t elementos_a_escribir = std::min(elementos_por_bloque, fin - pos);
+            memcpy(buffer, datos + (pos - inicio), elementos_a_escribir * sizeof(int64_t));
             escribirBloque(salida, buffer, pos / elementos_por_bloque);
         }
         
@@ -271,73 +255,119 @@ void QuicksortExterno::quicksortRecursivo(const std::string& archivo_entrada,
         return;
     }
     
-    // Seleccionar pivotes
+    // Seleccionamos los pivotes
     int64_t* pivotes = seleccionarPivotes(archivo_entrada, inicio, fin);
-    size_t num_pivotes = pivotes ? a - 1 : 0;
-    size_t num_particiones = num_pivotes + 1;
     
-    // Nombres de archivos temporales para las particiones
-    std::string* archivos_particiones = new std::string[num_particiones];
-    for (size_t i = 0; i < num_particiones; i++) {
-        archivos_particiones[i] = archivo_salida + ".part" + std::to_string(i);
+    // Particionamos el archivo
+    std::string archivo_temp = archivo_salida + ".tmp";
+    particionarArchivo(archivo_entrada, archivo_temp, inicio, fin, pivotes, a - 1);
+    
+    // Determinamos las posiciones finales de cada partición
+    std::vector<size_t> posiciones_particiones;
+    posiciones_particiones.push_back(inicio);
+    
+    FILE* temp = fopen(archivo_temp.c_str(), "rb");
+    
+    // Cerramos el archivo (no usaremos el tamaño)
+    fclose(temp);
+    
+    // Si hay pivotes, necesitamos calcular los tamaños de cada partición
+    if (pivotes != nullptr) {
+        // Creamos archivos temporales para poder contar los elementos
+        std::vector<std::string> nombres_temp;
+        for (size_t i = 0; i <= a - 1; i++) {
+            std::string nombre = archivo_temp + ".part" + std::to_string(i);
+            nombres_temp.push_back(nombre);
+        }
+        
+        // Contamos elementos en cada partición
+        std::vector<size_t> contadores(a, 0);
+        
+        // Abrimos el archivo temporal para lectura
+        FILE* archivo = fopen(archivo_temp.c_str(), "rb");
+        
+        // Leemos por bloques y contamos
+        for (size_t pos = inicio; pos < fin; pos += elementos_por_bloque) {
+            leerBloque(archivo, buffer, pos / elementos_por_bloque);
+            size_t elementos_en_bloque = std::min(elementos_por_bloque, fin - pos);
+            
+            for (size_t i = 0; i < elementos_en_bloque; i++) {
+                int64_t elemento = buffer[i];
+                
+                // Encontrar la partición correcta
+                size_t particion = 0;
+                while (particion < a - 1 && elemento >= pivotes[particion]) {
+                    particion++;
+                }
+                
+                contadores[particion]++;
+            }
+        }
+        
+        fclose(archivo);
+        
+        // Calculamos posiciones acumulativas
+        for (size_t i = 0; i < a; i++) {
+            posiciones_particiones.push_back(posiciones_particiones.back() + contadores[i]);
+        }
+    } else {
+        // Si no hay pivotes, solo hay una partición
+        posiciones_particiones.push_back(fin);
     }
     
-    // Tamaños de las particiones
-    size_t* tamanos_particiones = new size_t[num_particiones]();
-    
-    // Particionar el archivo
-    particionarArchivo(archivo_entrada, archivos_particiones, inicio, fin, 
-                       pivotes, num_pivotes, tamanos_particiones);
-    
-    // Ordenar recursivamente cada partición
-    size_t pos_actual = inicio;
-    for (size_t i = 0; i < num_particiones; i++) {
-        if (tamanos_particiones[i] > 0) {
-            std::string archivo_ordenado = archivos_particiones[i] + ".sorted";
-            quicksortRecursivo(archivos_particiones[i], archivo_ordenado, 0, tamanos_particiones[i]);
-            
-            // Renombrar archivo ordenado
-            remove(archivos_particiones[i].c_str());
-            rename(archivo_ordenado.c_str(), archivos_particiones[i].c_str());
+    // Ordenamos recursivamente cada partición
+    for (size_t i = 0; i < posiciones_particiones.size() - 1; i++) {
+        size_t inicio_particion = posiciones_particiones[i];
+        size_t fin_particion = posiciones_particiones[i + 1];
+        
+        if (inicio_particion < fin_particion) {
+            std::string archivo_particion = archivo_salida + ".part" + std::to_string(i);
+            quicksortRecursivo(archivo_temp, archivo_particion, inicio_particion, fin_particion);
         }
     }
     
-    // Concatenar particiones ordenadas en el archivo final
-    FILE* salida = fopen(archivo_salida.c_str(), "wb");
+    // Concatenamos las particiones ordenadas
+    FILE* archivo_final = fopen(archivo_salida.c_str(), "wb");
     
-    for (size_t i = 0; i < num_particiones; i++) {
-        if (tamanos_particiones[i] > 0) {
-            FILE* particion = fopen(archivos_particiones[i].c_str(), "rb");
+    for (size_t i = 0; i < posiciones_particiones.size() - 1; i++) {
+        size_t inicio_particion = posiciones_particiones[i];
+        size_t fin_particion = posiciones_particiones[i + 1];
+        
+        if (inicio_particion < fin_particion) {
+            std::string archivo_particion = archivo_salida + ".part" + std::to_string(i);
+            FILE* particion = fopen(archivo_particion.c_str(), "rb");
             
-            // Copiar datos de la partición al archivo final
-            for (size_t j = 0; j < tamanos_particiones[i]; j += elementos_por_bloque) {
-                // size_t elementos_a_copiar = std::min(elementos_por_bloque, tamanos_particiones[i] - j);
+            // Leemos y escribimos por bloques
+            for (size_t pos = inicio_particion; pos < fin_particion; pos += elementos_por_bloque) {
+                size_t elementos_a_procesar = std::min(elementos_por_bloque, fin_particion - pos);
                 
-                leerBloque(particion, buffer, j / elementos_por_bloque);
-                escribirBloque(salida, buffer, (pos_actual + j) / elementos_por_bloque);
+                // Leemos el bloque de la partición
+                fseek(particion, (pos - inicio_particion) * sizeof(int64_t), SEEK_SET);
+                fread(buffer, sizeof(int64_t), elementos_a_procesar, particion);
+                contador_io++;
+                
+                // Escribimos en el archivo final
+                fseek(archivo_final, pos * sizeof(int64_t), SEEK_SET);
+                fwrite(buffer, sizeof(int64_t), elementos_a_procesar, archivo_final);
+                contador_io++;
             }
             
-            pos_actual += tamanos_particiones[i];
             fclose(particion);
-            remove(archivos_particiones[i].c_str());
+            remove(archivo_particion.c_str());
         }
     }
     
-    fclose(salida);
+    fclose(archivo_final);
+    remove(archivo_temp.c_str());
     
-    // Liberar memoria
-    delete[] archivos_particiones;
-    delete[] tamanos_particiones;
-    if (pivotes) delete[] pivotes;
+    // Liberamos la memoria de los pivotes
+    if (pivotes != nullptr) {
+        delete[] pivotes;
+    }
 }
 
-/**
- * @brief Función principal para ordenar un archivo usando Quicksort Externo.
- * @param archivo_entrada Nombre del archivo que contiene los datos desordenados.
- * @param archivo_salida Nombre del archivo donde se guardará el resultado ordenado.
- */
 void QuicksortExterno::ordenar(const std::string& archivo_entrada, const std::string& archivo_salida) {
-    // Obtener tamaño del archivo
+    // Obtenemos el tamaño del archivo
     FILE* archivo = fopen(archivo_entrada.c_str(), "rb");
     if (!archivo) {
         std::cerr << "Error al abrir el archivo: " << archivo_entrada << std::endl;
@@ -349,21 +379,14 @@ void QuicksortExterno::ordenar(const std::string& archivo_entrada, const std::st
     size_t num_elementos = tamano_archivo / sizeof(int64_t);
     fclose(archivo);
     
-    // Iniciar el proceso de ordenamiento
+    // Iniciamos el proceso de ordenar
     quicksortRecursivo(archivo_entrada, archivo_salida, 0, num_elementos);
 }
 
-/**
- * @brief Devuelve el contador de operaciones de I/O.
- * @return El número total de operaciones de lectura/escritura de bloques realizadas.
- */
 size_t QuicksortExterno::obtenerContadorIO() {
     return contador_io;
 }
 
-/**
- * @brief Reinicia el contador de operaciones de I/O a cero.
- */
 void QuicksortExterno::resetContadorIO() {
     contador_io = 0;
 }
