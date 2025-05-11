@@ -36,3 +36,8 @@ El segundo parametro indica la cantidad de memoria usada en este caso 50mb. Pero
 ./main_tests 
 ```
 
+# Consideraciones
+
+El desarrollo y la ejecución del trabajo se realizaron utilizando discos de estado sólido (SSD), lo cual mejoro en parte el rendimiento general del sistema. El uso de discos SSD permite una mayor velocidad de lectura y escritura en comparación con discos duros tradicionales (HDD), lo que resulta en que ejecutar esta tarea con discos HDD pueda tomarse mas tiempo que con discos SSD. Bajo estas condiciones, el programa completo en SSD tomó un poco mas de 4 horas en ejecutarse, dependiendo de la carga del sistema y las variaciones entre ejecuciones.
+
+Cabe destacar que el procedimiento de búsqueda ternaria se ejecuta utilizando un límite de 50 MB de memoria principal, conforme a lo requerido por el enunciado. Esta restricción de memoria influye directamente en el tiempo de ejecución, haciendo que el proceso de búsqueda del valor óptimo de aridad sea considerablemente lento. Por esta razón, si bien la búsqueda se ejecuta automáticamente, se ha dejado comentada en el código la aridad óptima obtenida tras múltiples pruebas realizadas en nuestros sistemas, para facilitar la ejecución directa si no se quiere repetir el proceso completo.
