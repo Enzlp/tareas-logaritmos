@@ -320,7 +320,8 @@ struct FragmentoArchivo {
 };
 
 /**
- * Implementación iterativa del algoritmo MergeSort externo
+ * Implementación iterativa del algoritmo MergeSort externo. Se encarga de usar las funciones auxiliares para hacer divisiones del archivo y la posterior mezcla o fusion
+ * en los archivos finales
  * @param archivo_entrada Nombre del archivo a ordenar
  * @param archivo_salida Nombre del archivo de salida ordenado
  * @param N Tamaño del archivo en bytes
@@ -406,11 +407,11 @@ void MergesortExterno::mergesort(const std::string& archivo_entrada, const std::
         }
     }
     
-    // Ahora tenemos una cola de archivos ordenados, los fusionamos de a pares hasta que quede uno solo
+    // Ahora tenemos una cola de archivos ordenados, los mezclamos de a pares hasta que quede uno solo
     while (archivos_ordenados.size() > 1) {
         std::vector<std::string> grupo_fusion;
         
-        // Tomamos hasta 'a' archivos para fusionarlos
+        // Tomamos hasta 'a' archivos para mezclarlos
         for (size_t i = 0; i < a && !archivos_ordenados.empty(); i++) {
             grupo_fusion.push_back(archivos_ordenados.front());
             archivos_ordenados.pop();
@@ -419,13 +420,13 @@ void MergesortExterno::mergesort(const std::string& archivo_entrada, const std::
         // Nombre del archivo resultante de la fusión
         std::string archivo_fusionado = archivo_salida + ".merged_" + std::to_string(contador_temp++);
         
-        // Fusionar los archivos
+        // Mezclar(Fusionar) los archivos
         mergeArchivos(grupo_fusion, archivo_fusionado);
         
         // Añadir el archivo fusionado a la cola
         archivos_ordenados.push(archivo_fusionado);
         
-        // Eliminar los archivos ya fusionados
+        // Eliminar los archivos ya fusionados (o mezclados)
         for (const auto& nombre : grupo_fusion) {
             remove(nombre.c_str());
         }
