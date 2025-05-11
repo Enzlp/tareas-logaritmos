@@ -435,7 +435,6 @@ void MergesortExterno::mergesort(const std::string& archivo_entrada, const std::
     if (!archivos_ordenados.empty()) {
         std::string ultimo_archivo = archivos_ordenados.front();
         
-        // En sistemas POSIX podríamos usar rename(), pero para mayor compatibilidad:
         FILE* src = fopen(ultimo_archivo.c_str(), "rb");
         FILE* dst = fopen(archivo_salida.c_str(), "wb");
         
