@@ -130,8 +130,8 @@ int main(int argc, char* argv[]){
     size_t tamano_archivo = 60 * M;
     size_t b = B / sizeof(int64_t);
 
-    //int a = busqueda_ternaria(2, b, M, B, archivo_entrada, tamano_archivo);
-    int a = 200;
+    int a = busqueda_ternaria(2, b, M, B, archivo_entrada, tamano_archivo);
+    //int a = 200;
     
     cout<< "Aridad obtenida: " << a << std::endl;
 
