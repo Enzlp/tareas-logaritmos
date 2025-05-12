@@ -7,7 +7,7 @@
 using namespace std;
 
 /**
- * Genera una rchivo con una secuencia de numero enteros de 64 bits aleatoria, dado un nombre y tamaño especificado.
+ * Genera una archivo con una secuencia de numero enteros de 64 bits aleatoria, dado un nombre y tamaño especificado.
  * @param filename nombre del archivo a generar
  * @param memory_size tamaño de memoria principal definido, para esta tarea seria 50MB
  * @param memory_size_multiplier multiplicador del tamaño de memoria para obtener el tamaño del archivo final
