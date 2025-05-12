@@ -6,6 +6,12 @@
 
 using namespace std;
 
+/**
+ * Genera una rchivo con una secuencia de numero enteros de 64 bits aleatoria, dado un nombre y tamaño especificado.
+ * @param filename nombre del archivo a generar
+ * @param memory_size tamaño de memoria principal definido, para esta tarea seria 50MB
+ * @param memory_size_multiplier multiplicador del tamaño de memoria para obtener el tamaño del archivo final
+ */
 void generate_binary_file(std::string filename, size_t memory_size, size_t memory_size_multiplier){
     cout << endl;
     cout << "Generando binario: " << endl;
@@ -59,8 +65,4 @@ void generate_binary_file(std::string filename, size_t memory_size, size_t memor
     //cout << "Primer elemento: " << primer_elem << endl;
     //cout << "Ultimo elemento: " << ultimo_elem << endl;
     cout << "Binario generado: Largo " << memory_size_multiplier << "M" << endl; 
-}
-
-void read_binary_file(string filename, size_t memory_size, size_t memory_size_multiplier){
-
 }
