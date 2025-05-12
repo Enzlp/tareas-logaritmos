@@ -8,23 +8,25 @@
 #include <stdexcept> // Para std::runtime_error (opcional)
 #include <random>    // Para std::random_device, std::mt19937
 
-// --- Constructor y Métodos Públicos ---
-
+/**
+ * Constructor de la clase QuicksortExterno.
+ * @param block_size_bytes Tamaño del bloque de disco en bytes (B).
+ * @param memory_size_bytes Tamaño de la memoria principal en bytes (M).
+ * @param arity_a_val Aridad 'a', número de subarreglos en los que particionar.
+ */
 QuicksortExterno::QuicksortExterno(size_t block_size_bytes, size_t memory_size_bytes, size_t arity_a_val)
     : B_bytes(block_size_bytes), M_bytes(memory_size_bytes), arity_a(arity_a_val),
       contador_io(0), temp_file_id_counter(0) {
-    if (arity_a < 2) {
-        // Según el enunciado, a está en [2, b], por lo que arity_a >= 2
-        // Si por alguna razón es menor, podría lanzar un error o ajustarlo.
-        // Por ahora, asumimos que arity_a >= 2 según las reglas de la tarea.
-        // this->arity_a = 2; // Forzar un mínimo si es necesario
-    }
     this->num_pivots_to_select = (this->arity_a > 0) ? (this->arity_a - 1) : 0;
 
     // Sembrar el generador de números aleatorios una vez
     srand(static_cast<unsigned int>(time(nullptr)));
 }
-
+/**
+ * Ordena un archivo binario de enteros de 64 bits usando Quicksort Externo.
+ * @param archivo_entrada Ruta al archivo binario de entrada.
+ * @param archivo_salida Ruta donde se guardará el archivo binario ordenado.
+ */
 void QuicksortExterno::ordenar(const std::string& archivo_entrada, const std::string& archivo_salida) {
     resetContadorIO();
     temp_file_id_counter = 0; // Reiniciar para nombres de temp únicos por cada llamada a ordenar
@@ -44,16 +46,27 @@ void QuicksortExterno::ordenar(const std::string& archivo_entrada, const std::st
     quicksort_recursivo(archivo_entrada, N_total_elements, archivo_salida);
 }
 
+/**
+ * Metodo para obtener contador de I/O
+ * @return El número total de operaciones de E/S (lectura/escritura de bloques) realizadas.
+ */
 size_t QuicksortExterno::obtenerContadorIO() const {
     return contador_io;
 }
 
+
+/**
+ * Reinicia el contador de operaciones de E/S a cero.
+ */
 void QuicksortExterno::resetContadorIO() {
     contador_io = 0;
 }
 
-// --- Métodos Privados (Implementación del Algoritmo) ---
-
+/**
+ * Obtiene el número de elementos int64_t en un archivo binario.
+ * @param file_name Nombre del archivo.
+ * @return Número de elementos de 64 bits en el archivo.
+ */
 size_t QuicksortExterno::get_num_elements_in_file(const std::string& file_name) {
     FILE* file = fopen(file_name.c_str(), "rb");
     if (!file) {
@@ -70,10 +83,22 @@ size_t QuicksortExterno::get_num_elements_in_file(const std::string& file_name) 
     return static_cast<size_t>(file_size_bytes) / sizeof(int64_t);
 }
 
+/**
+ * Genera un nombre único para un archivo temporal.
+ * @return Nombre del archivo temporal.
+ */
 std::string QuicksortExterno::generar_nombre_temporal() {
     return "temp_qsort_" + std::to_string(temp_file_id_counter++) + ".bin";
 }
 
+
+/**
+ * Ordena en memoria una partición que cabe completamente en la memoria principal.
+ * Lee de 'input_filename', ordena y escribe en 'output_filename'.
+ * @param input_filename nombre archivo a ordenar
+ * @param num_elements numero de elementos en el archivo
+ * @param output_filename nombre del archivo de salida
+ */
 void QuicksortExterno::sort_in_memory_and_write(const std::string& input_filename, size_t num_elements, const std::string& output_filename) {
     if (num_elements == 0) {
         FILE* out_empty = fopen(output_filename.c_str(), "wb");
@@ -122,6 +147,12 @@ void QuicksortExterno::sort_in_memory_and_write(const std::string& input_filenam
     fclose(out_file);
 }
 
+/**
+ * Selecciona 'num_pivots_to_select' pivotes de un bloque aleatorio del archivo 'input_filename'.
+ * @param input_filename Archivo del cual seleccionar pivotes.
+ * @param num_elements_in_file Número total de elementos en 'input_filename'.
+ * @return Vector con los pivotes seleccionados y ordenados.
+ */
 std::vector<int64_t> QuicksortExterno::seleccionar_pivotes(const std::string& input_filename, size_t num_elements_in_file) {
     if (num_pivots_to_select == 0 || num_elements_in_file == 0) {
         return {};
@@ -170,7 +201,13 @@ std::vector<int64_t> QuicksortExterno::seleccionar_pivotes(const std::string& in
     return pivots;
 }
 
-
+/**
+ * Particiona 'input_filename' en 'arity_a' archivos temporales basado en los 'pivots'.
+ * @param input_filename Archivo a particionar.
+ * @param num_elements_total Número de elementos en 'input_filename'.
+ * @param pivots Vector de pivotes ordenados.
+ * @return Vector de pares, donde cada par contiene el nombre del archivo de partición temporal y el número de elementos que contiene.
+ */
 std::vector<std::pair<std::string, size_t>> QuicksortExterno::particionar_archivo(
     const std::string& input_filename,
     size_t num_elements_total,
@@ -251,6 +288,11 @@ std::vector<std::pair<std::string, size_t>> QuicksortExterno::particionar_archiv
     return partition_files_info;
 }
 
+/**
+ * Concatena una lista de archivos de entrada (ordenados) en un único archivo de salida.
+ * @param nombres_archivos_entrada Vector de nombres de archivos a concatenar.
+ * @param archivo_salida_final Nombre del archivo resultante de la concatenación.
+ */
 void QuicksortExterno::concatenar_archivos(const std::vector<std::string>& nombres_archivos_entrada, const std::string& archivo_salida_final) {
     FILE* out_final_file = fopen(archivo_salida_final.c_str(), "wb");
     if (!out_final_file) { /* Manejar error */ return; }
@@ -279,6 +321,13 @@ void QuicksortExterno::concatenar_archivos(const std::vector<std::string>& nombr
     fclose(out_final_file);
 }
 
+/**
+ * Función principal recursiva de Quicksort Externo.
+ * Ordena el archivo 'input_filename' que contiene 'num_elements' y escribe el resultado en 'output_filename'.
+ * @param current_input_file nombre del archivo actual que se esta ordenando
+ * @param num_elements_in_partition numero de elementos en esta particion
+ * @param final_output_file_for_this_recursion nombre del archivo de salida final
+ */
 void QuicksortExterno::quicksort_recursivo(const std::string& current_input_file, size_t num_elements_in_partition, const std::string& final_output_file_for_this_recursion) {
     if (num_elements_in_partition == 0) {
         FILE* out_empty = fopen(final_output_file_for_this_recursion.c_str(), "wb");
@@ -297,28 +346,6 @@ void QuicksortExterno::quicksort_recursivo(const std::string& current_input_file
     // Paso recursivo
     // 1. Seleccionar pivotes
     std::vector<int64_t> pivots = seleccionar_pivotes(current_input_file, num_elements_in_partition);
-    if (pivots.empty() && num_pivots_to_select > 0 && num_elements_in_partition > M_elements_capacity) {
-        // Si no se pudieron seleccionar pivotes (ej. archivo muy pequeño o con todos los valores iguales)
-        // pero aún es muy grande para memoria, simplemente copiamos (o tratamos como una sola partición).
-        // Esto podría llevar a un rendimiento O(N^2) en el peor caso de Quicksort si siempre ocurre.
-        // Una mejora sería cambiar a Mergesort o Heapsort si la selección de pivotes falla repetidamente.
-        // Por ahora, si no hay pivotes, la lógica de partición pondrá todo en la primera partición.
-        // Si esto sucede, y el tamaño no disminuye, podría haber un bucle si no se maneja.
-        // Sin embargo, si es más grande que M, y no hay pivotes, `particionar_archivo`
-        // colocará todo en la partición 0. La recursión seguirá. Si no hay progreso,
-        // se podría forzar sort_in_memory_and_write si el número de elementos es suficientemente pequeño,
-        // incluso si es > M_elements_capacity pero < umbral_alternativo. O simplemente confiar en que la base
-        // case `num_elements_in_partition <= M_elements_capacity` eventualmente se alcance.
-        // O si `pivots.empty()` y `arity_a > 1`, implica que todos los elementos son iguales (o el bloque leído era homogéneo).
-        // En este caso, el archivo ya está "particionado" respecto a esos pivotes (trivialmente).
-        // Simplemente copiamos el archivo de entrada a salida, ya que no se puede particionar más con estos pivotes.
-        // Este es un caso degenerado de Quicksort.
-        // Forzamos la copia y asumimos que está lo mejor particionado posible sin pivotes.
-        // O, si `seleccionar_pivotes` devuelve vacío porque `num_elements_in_file` es muy chico (menor que `num_pivots_to_select`),
-        // entonces es probable que ya estemos cerca del caso base.
-        // La lógica de `particionar_archivo` con `pivots.empty()` ya maneja esto: todo va a la partición 0.
-    }
-
 
     // 2. Particionar archivo
     std::vector<std::pair<std::string, size_t>> partitions_info =
