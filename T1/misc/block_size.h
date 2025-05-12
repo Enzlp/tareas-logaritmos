@@ -6,6 +6,10 @@
 #include <iostream>
 #include <string>
 
+/** 
+ * Genera el valor del bloque de memoria en disco
+ * @return valor del bloque
+ */
 inline long get_block_size() {
   std::string cmd;
 
