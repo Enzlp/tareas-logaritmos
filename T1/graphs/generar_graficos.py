@@ -11,8 +11,6 @@ Genera graficos de experimentos hechos con mergesort externo y quicksort externo
 @param x_label nombre de eje x
 @param title titulo del grafico
 """
-import pandas as pd
-import matplotlib.pyplot as plt
 
 def generar_grafico(archivo_csv, y_label, x_label, title):
     # Cargar datos del archivo CSV sin encabezado
