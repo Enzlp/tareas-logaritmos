@@ -1,6 +1,5 @@
 {
   "files.associations": {
-    "tuple": "cpp",
     "array": "cpp",
     "atomic": "cpp",
     "bit": "cpp",
@@ -9,6 +8,7 @@
     "chrono": "cpp",
     "clocale": "cpp",
     "cmath": "cpp",
+    "codecvt": "cpp",
     "compare": "cpp",
     "complex": "cpp",
     "concepts": "cpp",
@@ -37,6 +37,7 @@
     "ratio": "cpp",
     "string_view": "cpp",
     "system_error": "cpp",
+    "tuple": "cpp",
     "type_traits": "cpp",
     "utility": "cpp",
     "format": "cpp",
