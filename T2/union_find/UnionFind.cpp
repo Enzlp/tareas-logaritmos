@@ -35,3 +35,22 @@ void UnionFind::union_sets(nodo* u, nodo* v){
         u_root->size += v_root->size;
     }
 }
+
+void UnionFind::union_sets_optimized(nodo* u, nodo* v) {
+	nodo* u_root = find_optimized(u);
+	nodo* v_root = find_optimized(v);
+
+    // Si ya están en el mismo conjunto, no hacer nada
+    if (u_root == v_root) {
+        return;
+    }
+    
+    // Union by size: el árbol más pequeño se convierte en hijo del más grande
+    if (u_root->size < v_root->size) {
+        u_root->parent = v_root;
+        v_root->size += u_root->size;
+    } else {
+        v_root->parent = u_root;
+        u_root->size += v_root->size;
+    }
+}

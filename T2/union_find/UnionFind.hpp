@@ -14,6 +14,8 @@ public:
     nodo* find_optimized(nodo* u);
 
     void union_sets(nodo* u, nodo* v);
+
+    void union_sets_optimized(nodo* u, nodo* v);
 };
 
 #endif
