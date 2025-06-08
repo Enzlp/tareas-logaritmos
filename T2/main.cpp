@@ -78,5 +78,10 @@ vector<arista> generate_aristas_heap(int N, vector<nodo>& nodos){
 }
 
 int main(){
+	// Vector de valores para N
+	vector<int> N = {32, 64, 128, 256, 512, 1024, 2048, 4096};
+
+	// Vector de tiempos
+	vector<double> time_avg;
 
 }
