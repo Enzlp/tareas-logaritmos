@@ -7,7 +7,7 @@ using namespace std;
 
 vector<nodo> generate_seq(int N){
 	cout << endl;
-    cout << "Generando secuencias para N ="<< N <<": " << endl;
+  cout << "Generando secuencias para N ="<< N <<": " << endl;
 
 	// Generador random
 	random_device rd;
