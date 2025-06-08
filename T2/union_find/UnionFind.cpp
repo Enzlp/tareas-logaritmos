@@ -10,7 +10,12 @@ nodo* UnionFind::find(nodo* u){
 }
 
 nodo* UnionFind::find_optimized(nodo* u){
-    return;
+	if (u->parent == u) {
+        return u;
+    }
+
+	u->parent = find_optimized(u->parent);
+    return u->parent;
 }
 
 
