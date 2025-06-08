@@ -15,7 +15,6 @@ vector<nodo> generate_seq(int N){
     uniform_real_distribution<double> dist(0.0, 1.0);
     
     vector<nodo> seq;
-    seq.reserve(N); // Reservar espacio para eficiencia
     
     for(int i = 0; i < N; i++){
         double x = dist(gen);
@@ -38,7 +37,6 @@ vector<arista> generate_aristas_arreglo(int N, vector<nodo>& nodos){
     
     // Creamos arreglo de aristas
     vector<arista> aristas;
-    aristas.reserve(N * (N - 1) / 2); // Reservar espacio para N(N-1)/2 aristas
     
     for(int i = 0; i < N; i++){
         for(int j = i + 1; j < N; j++){
@@ -63,7 +61,6 @@ vector<arista> generate_aristas_heap(int N, vector<nodo>& nodos){
     
     // Creamos arreglo de aristas
     vector<arista> aristas;
-    aristas.reserve(N * (N - 1) / 2); // Reservar espacio para N(N-1)/2 aristas
     
     for(int i = 0; i < N; i++){
         for(int j = i + 1; j < N; j++){
@@ -82,10 +79,10 @@ vector<arista> generate_aristas_heap(int N, vector<nodo>& nodos){
 }
 
 int main(){
-	// Vector de valores para N
-	vector<int> N = {32, 64, 128, 256, 512, 1024, 2048, 4096};
+		// Vector de valores para N
+		vector<int> N = {32, 64, 128, 256, 512, 1024, 2048, 4096};
 
-	// Vector de tiempos
-	vector<double> time_avg;
+		// Vector de tiempos
+		vector<double> time_avg;
 
 }
