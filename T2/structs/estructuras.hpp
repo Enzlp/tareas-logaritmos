@@ -16,4 +16,8 @@ struct arista{
       double dy = nodo1->y - nodo2->y;
       peso = dx * dx + dy * dy;
   }
+
+  bool operator<(const arista& other) const {
+    return peso < other.peso;
+  }
 };

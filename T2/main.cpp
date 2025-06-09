@@ -31,31 +31,8 @@ vector<nodo> generate_seq(int N){
     return seq;
 }
 
-vector<arista> generate_aristas_arreglo_previo(int N, vector<nodo>* nodos){
-    cout << endl;
-    cout << "Calculando arreglo de aristas para N = " << N << ": " << endl;
-    
-    // Creamos arreglo de aristas
-    vector<arista> aristas;
-    
-    for(int i = 0; i < N; i++){
-        for(int j = i + 1; j < N; j++){
-            // Usar el constructor de arista que calcula automáticamente el peso
-            aristas.emplace_back(&nodos[i], &nodos[j]);
-        }
-    }
-    
-    cout << "Aristas calculadas! " << endl;
-    
-    // Ordenamos por peso de menor a mayor usando sort
-    sort(aristas.begin(), aristas.end(), [](const arista& a, const arista& b) {
-        return a.peso < b.peso;
-    });
-    
-    return aristas;
-}
-
-vector<arista> generate_aristas_arreglo(int N, vector<nodo>* nodos){
+// Cambiar parámetro de vector<nodo>* a vector<nodo>&
+vector<arista> generate_aristas_arreglo(int N, vector<nodo>& nodos){
     cout << endl;
     cout << "Calculando arreglo de aristas para N = " << N << ": " << endl;
    
@@ -63,7 +40,7 @@ vector<arista> generate_aristas_arreglo(int N, vector<nodo>* nodos){
    
     for(int i = 0; i < N; i++){
         for(int j = i + 1; j < N; j++){
-            aristas.emplace_back(&nodos[i], &nodos[j]);  // Now nodos[i] gives nodo&
+            aristas.emplace_back(&nodos[i], &nodos[j]);  // Ahora funciona correctamente
         }
     }
    
@@ -76,7 +53,8 @@ vector<arista> generate_aristas_arreglo(int N, vector<nodo>* nodos){
     return aristas;
 }
 
-vector<arista> generate_aristas_heap(int N, vector<nodo>* nodos){
+// Cambiar parámetro de vector<nodo>* a vector<nodo>&
+vector<arista> generate_aristas_heap(int N, vector<nodo>& nodos){
     cout << endl;
     cout << "Calculando heap de aristas para N = " << N << ": " << endl;
    
@@ -92,38 +70,11 @@ vector<arista> generate_aristas_heap(int N, vector<nodo>* nodos){
         return a.peso > b.peso;
     });
    
-    cout << "Aristas calculadas! " << endl;
-    return aristas;
-}
-
-
-
-vector<arista> generate_aristas_heap_previo(int N, vector<nodo>* nodos){
-    cout << endl;
-    cout << "Calculando heap de aristas para N = " << N << ": " << endl;
-    
-    // Creamos arreglo de aristas
-    vector<arista> aristas;
-    
-    for(int i = 0; i < N; i++){
-        for(int j = i + 1; j < N; j++){
-            // Usar el constructor de arista que calcula automáticamente el peso
-            aristas.emplace_back(&nodos[i], &nodos[j]);
-        }
-    }
-    
-    // Convertimos a heap min
-    make_heap(aristas.begin(), aristas.end(), [](const arista& a, const arista& b) {
-        return a.peso > b.peso;
-    });
-    
     cout << "Aristas calculadas! " << endl;
     return aristas;
 }
 
 vector<arista> kruskal_arreglo(int N, vector<arista> aristas, int optimizacion){
-    // Segun el valor de flag_optimizacion, ejecutamos la version normal o la optimizada
-    
     vector<arista> bosque;
     UnionFind uf;
 
@@ -162,15 +113,15 @@ vector<arista> kruskal_arreglo(int N, vector<arista> aristas, int optimizacion){
 }
 
 vector<arista> kruskal_heap(int N, vector<arista> aristas, int optimizacion){
-    // Segun el valor de flag_optimizacion, ejecutamos la version normal o la optimizada
-
     vector<arista> bosque;
     UnionFind uf;
     int aristas_agregadas = 0;
 
     while(!aristas.empty()) {
         arista current_arista = aristas.front();
-        pop_heap(aristas.begin(), aristas.end());
+        pop_heap(aristas.begin(), aristas.end(), [](const arista& a, const arista& b) {
+            return a.peso > b.peso;  // Usar el mismo comparador que en make_heap
+        });
         aristas.pop_back();
 
         nodo* root_u;
@@ -205,35 +156,36 @@ vector<arista> kruskal_heap(int N, vector<arista> aristas, int optimizacion){
 }
 
 int main(){
-		// Vector de valores para N
-		vector<int> N = {32, 64, 128, 256, 512, 1024, 2048, 4096};
+    // Vector de valores para N
+    vector<int> N = {32, 64, 128, 256, 512, 1024, 2048, 4096};
 
-        for (int i = 0; i < N.size(); i++){
-            int veces = 0;
-            while (veces < 4){
-                vector<nodo> nodos_sin_opt_arreglo = generate_seq(N[i]);
-                vector<nodo> nodo_sin_opt_heap = nodos_sin_opt_arreglo;
-                vector<nodo> nodos_opt_arreglo = nodos_sin_opt_arreglo;
-                vector<nodo> nodos_opt_heap = nodos_sin_opt_arreglo;                
-                
-                vector<arista> aristas_posibles_sin_opt_arreglo = generate_aristas_arreglo(N[i], &nodos_sin_opt_arreglo);
-                vector<arista> aristas_posibles_sin_opt_heap = generate_aristas_heap(N[i], &nodo_sin_opt_heap);
-                vector<arista> aristas_posibles_opt_arreglo = generate_aristas_arreglo(N[i], &nodos_opt_arreglo);
-                vector<arista> aristas_posibles_opt_heap = generate_aristas_heap(N[i], &nodos_opt_heap);
-
-                kruskal_arreglo(N[i], aristas_posibles_sin_opt_arreglo, false);
-                kruskal_heap(N[i], aristas_posibles_sin_opt_heap, false);
-
-                // Ahora ejecutamos las versiones con optimizacion
-                kruskal_arreglo(N[i], aristas_posibles_opt_arreglo, true);
-                kruskal_heap(N[i], aristas_posibles_opt_heap, true);
-            }
+    for (int i = 0; i < N.size(); i++){
+        int veces = 0;
+        while (veces < 4){
+            vector<nodo> nodos_sin_opt_arreglo = generate_seq(N[i]);
+            vector<nodo> nodo_sin_opt_heap = nodos_sin_opt_arreglo;
+            vector<nodo> nodos_opt_arreglo = nodos_sin_opt_arreglo;
+            vector<nodo> nodos_opt_heap = nodos_sin_opt_arreglo;                
             
+            // Pasar por referencia en lugar de por puntero
+            vector<arista> aristas_posibles_sin_opt_arreglo = generate_aristas_arreglo(N[i], nodos_sin_opt_arreglo);
+            vector<arista> aristas_posibles_sin_opt_heap = generate_aristas_heap(N[i], nodo_sin_opt_heap);
+            vector<arista> aristas_posibles_opt_arreglo = generate_aristas_arreglo(N[i], nodos_opt_arreglo);
+            vector<arista> aristas_posibles_opt_heap = generate_aristas_heap(N[i], nodos_opt_heap);
+
+            kruskal_arreglo(N[i], aristas_posibles_sin_opt_arreglo, false);
+            kruskal_heap(N[i], aristas_posibles_sin_opt_heap, false);
+
+            // Ahora ejecutamos las versiones con optimizacion
+            kruskal_arreglo(N[i], aristas_posibles_opt_arreglo, true);
+            kruskal_heap(N[i], aristas_posibles_opt_heap, true);
+            
+            veces++; // No olvides incrementar el contador
         }
-        
-		// Vector de tiempos
-		vector<double> time_avg;
+    }
+    
+    // Vector de tiempos
+    vector<double> time_avg;
 
-        return 0;
-
+    return 0;
 }
