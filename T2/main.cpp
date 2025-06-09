@@ -5,16 +5,18 @@
 #include "./union_find/UnionFind.hpp"
 using namespace std;
 
-vector<nodo> generate_seq(int N){
+void generate_seq(int N, vector<nodo>& seq){
     cout << endl;
     cout << "Generando secuencias para N = " << N << ": " << endl;
+    
+    // Limpiar el vector por si acaso
+    seq.clear();
+    seq.reserve(N); // Reservar espacio para evitar relocaciones
     
     // Generador random
     random_device rd;
     mt19937_64 gen(rd());
     uniform_real_distribution<double> dist(0.0, 1.0);
-    
-    vector<nodo> seq;
     
     for(int i = 0; i < N; i++){
         double x = dist(gen);
@@ -22,25 +24,27 @@ vector<nodo> generate_seq(int N){
         
         // Usar constructor con parámetros
         seq.emplace_back(x, y);
-        
-        // Importante: actualizar el puntero parent después de que el nodo esté en su posición final
+    }
+    
+    // IMPORTANTE: Actualizar los punteros parent después de que todos los nodos estén en su posición final
+    for(int i = 0; i < N; i++){
         seq[i].parent = &seq[i];
     }
     
     cout << "Secuencia generada! " << endl;
-    return seq;
 }
 
-// Cambiar parámetro de vector<nodo>* a vector<nodo>&
 vector<arista> generate_aristas_arreglo(int N, vector<nodo>& nodos){
     cout << endl;
     cout << "Calculando arreglo de aristas para N = " << N << ": " << endl;
    
     vector<arista> aristas;
+    // Reservar espacio para evitar relocaciones
+    aristas.reserve((N * (N - 1)) / 2);
    
     for(int i = 0; i < N; i++){
         for(int j = i + 1; j < N; j++){
-            aristas.emplace_back(&nodos[i], &nodos[j]);  // Ahora funciona correctamente
+            aristas.emplace_back(&nodos[i], &nodos[j]);
         }
     }
    
@@ -53,12 +57,12 @@ vector<arista> generate_aristas_arreglo(int N, vector<nodo>& nodos){
     return aristas;
 }
 
-// Cambiar parámetro de vector<nodo>* a vector<nodo>&
 vector<arista> generate_aristas_heap(int N, vector<nodo>& nodos){
     cout << endl;
     cout << "Calculando heap de aristas para N = " << N << ": " << endl;
    
     vector<arista> aristas;
+    aristas.reserve((N * (N - 1)) / 2);
    
     for(int i = 0; i < N; i++){
         for(int j = i + 1; j < N; j++){
@@ -76,6 +80,7 @@ vector<arista> generate_aristas_heap(int N, vector<nodo>& nodos){
 
 vector<arista> kruskal_arreglo(int N, vector<arista> aristas, int optimizacion){
     vector<arista> bosque;
+    bosque.reserve(N - 1); // Un MST tiene exactamente N-1 aristas
     UnionFind uf;
 
     int aristas_agregadas = 0;
@@ -114,13 +119,14 @@ vector<arista> kruskal_arreglo(int N, vector<arista> aristas, int optimizacion){
 
 vector<arista> kruskal_heap(int N, vector<arista> aristas, int optimizacion){
     vector<arista> bosque;
+    bosque.reserve(N - 1);
     UnionFind uf;
     int aristas_agregadas = 0;
 
     while(!aristas.empty()) {
         arista current_arista = aristas.front();
         pop_heap(aristas.begin(), aristas.end(), [](const arista& a, const arista& b) {
-            return a.peso > b.peso;  // Usar el mismo comparador que en make_heap
+            return a.peso > b.peso;
         });
         aristas.pop_back();
 
@@ -162,7 +168,8 @@ int main(){
     for (int i = 0; i < N.size(); i++){
         int veces = 0;
         while (veces < 4){
-            vector<nodo> nodos_sin_opt_arreglo = generate_seq(N[i]);
+            vector<nodo> nodos_sin_opt_arreglo;
+            generate_seq(N[i], nodos_sin_opt_arreglo);    
             vector<nodo> nodo_sin_opt_heap = nodos_sin_opt_arreglo;
             vector<nodo> nodos_opt_arreglo = nodos_sin_opt_arreglo;
             vector<nodo> nodos_opt_heap = nodos_sin_opt_arreglo;                
