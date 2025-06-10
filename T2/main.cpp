@@ -2,7 +2,12 @@
 #include <vector>
 #include <random>
 #include <algorithm>
+#include <ctime> 
+#include <chrono>
+#include <fstream>
+#include <tuple>
 #include "./union_find/UnionFind.hpp"
+using namespace std::chrono;
 using namespace std;
 
 void generate_seq(int N, vector<nodo>& seq){
@@ -161,13 +166,26 @@ vector<arista> kruskal_heap(int N, vector<arista> aristas, int optimizacion){
     return bosque;
 }
 
+
 int main(){
     // Vector de valores para N
     vector<int> N = {32, 64, 128, 256, 512, 1024, 2048, 4096};
 
+    // Vector de tiempos
+    vector<double> time_avg_arreglo_no_opti;
+    vector<double> time_avg_heap_no_opti;
+    vector<double> time_avg_arreglo_opti;
+    vector<double> time_avg_heap_opti;
+
+
     for (int i = 0; i < N.size(); i++){
         int veces = 0;
-        while (veces < 4){
+        vector<double> N_time_avg_arreglo_no_opti;
+        vector<double> N_time_avg_heap_no_opti;
+        vector<double> N_time_avg_arreglo_opti;
+        vector<double> N_time_avg_heap_opti;
+
+        while (veces < 5){
             vector<nodo> nodos_sin_opt_arreglo;
             generate_seq(N[i], nodos_sin_opt_arreglo);    
             vector<nodo> nodo_sin_opt_heap = nodos_sin_opt_arreglo;
@@ -180,19 +198,44 @@ int main(){
             vector<arista> aristas_posibles_opt_arreglo = generate_aristas_arreglo(N[i], nodos_opt_arreglo);
             vector<arista> aristas_posibles_opt_heap = generate_aristas_heap(N[i], nodos_opt_heap);
 
+            auto start1 = high_resolution_clock::now();
             kruskal_arreglo(N[i], aristas_posibles_sin_opt_arreglo, false);
-            kruskal_heap(N[i], aristas_posibles_sin_opt_heap, false);
+            auto end1 = high_resolution_clock::now();
+            N_time_avg_arreglo_no_opti.push_back(duration<double>(end1 - start1).count());
 
-            // Ahora ejecutamos las versiones con optimizacion
+            auto start2 = high_resolution_clock::now();
+            kruskal_heap(N[i], aristas_posibles_sin_opt_heap, false);
+            auto end2 = high_resolution_clock::now();
+            N_time_avg_heap_no_opti.push_back(duration<double>(end2 - start2).count());
+            
+
+            auto start3 = high_resolution_clock::now();
             kruskal_arreglo(N[i], aristas_posibles_opt_arreglo, true);
+            auto end3 = high_resolution_clock::now();
+            N_time_avg_arreglo_opti.push_back(duration<double>(end3 - start3).count());
+        
+
+            auto start4 = high_resolution_clock::now();
             kruskal_heap(N[i], aristas_posibles_opt_heap, true);
+            auto end4 = high_resolution_clock::now();
+            N_time_avg_heap_opti.push_back(duration<double>(end4 - start4).count());
             
             veces++; // No olvides incrementar el contador
         }
+        // Calcular promedios y agregar al vector final
+        auto promedio = [](const vector<double>& tiempos) {
+            double suma = 0.0;
+            for (double t : tiempos) suma += t;
+            return suma / tiempos.size();
+        };
+
+        time_avg_arreglo_no_opti.push_back(promedio(N_time_avg_arreglo_no_opti));
+        time_avg_heap_no_opti.push_back(promedio(N_time_avg_heap_no_opti));
+        time_avg_arreglo_opti.push_back(promedio(N_time_avg_arreglo_opti));
+        time_avg_heap_opti.push_back(promedio(N_time_avg_heap_opti));
     }
     
-    // Vector de tiempos
-    vector<double> time_avg;
+    // Falta exportar los datos a csv para generar los graficos
 
     return 0;
 }
