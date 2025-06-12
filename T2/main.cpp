@@ -167,6 +167,17 @@ vector<arista> kruskal_heap(int N, vector<arista> aristas, int optimizacion){
 }
 
 
+void exportToCsv(const std::string& filename, const std::vector<double>& data){
+    std::string archivo = "graphs/"+filename;
+    std::ofstream file(archivo.c_str());
+
+    for (const auto& value : data) {
+        file << value << "\n";
+    }
+    file.close();
+}
+
+
 int main(){
     // Vector de valores para N
     vector<int> N = {32, 64, 128, 256, 512, 1024, 2048, 4096};
@@ -236,6 +247,9 @@ int main(){
     }
     
     // Falta exportar los datos a csv para generar los graficos
-
+    exportToCsv("time_avg_arreglo_no_opti.csv",time_avg_arreglo_no_opti);
+    exportToCsv("time_avg_heap_no_opti.csv",time_avg_heap_no_opti);
+    exportToCsv("time_avg_arreglo_opti.csv",time_avg_arreglo_opti);
+    exportToCsv("time_avg_heap_opti.csv",time_avg_heap_opti);
     return 0;
 }
